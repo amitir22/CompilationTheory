@@ -3,8 +3,6 @@ project(CompilationTheory)
 
 set(CMAKE_CXX_STANDARD 14)
 
-include_directories("../../../Academic/Technion/semesters/semester 4/COMPI - 236360/My/HW/HW1")
-
 add_executable(CompilationTheory
         HW1/part_a.cpp
         HW1/part_b.cpp

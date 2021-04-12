@@ -2,9 +2,12 @@
 
 int main()
 {
-	int token;
-	while(token = yylex()) {
-	// Your code here
-	}
+	int token = yylex();
+
+    while(token) {
+        token = yylex();
+        // Your code here
+    }
+
 	return 0;
 }
