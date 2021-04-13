@@ -39,6 +39,7 @@ whitespace  ([\t\n ])
 (\))        return RPAREN;
 (\{)        return LBRACE;
 (\})        return RBRACE;
+(=)         return ASSIGN;
 ((==)|(!=)|(\<=)|(\>=)|(\<)|(\>))   return RELOP;
 ((\+)|(\-)|(\*)|(\/))   return BINOP;
 (\/\/[^\n\r]+)  return COMMENT;

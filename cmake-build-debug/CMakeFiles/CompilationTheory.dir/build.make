@@ -76,9 +76,22 @@ include CMakeFiles/CompilationTheory.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/CompilationTheory.dir/flags.make
 
+CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.o: CMakeFiles/CompilationTheory.dir/flags.make
+CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.o: ../HW1/lex.yy.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -o CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.o -c /cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/lex.yy.c
+
+CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/lex.yy.c > CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.i
+
+CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/lex.yy.c -o CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.s
+
 CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o: CMakeFiles/CompilationTheory.dir/flags.make
 CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o: ../HW1/part_a.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o"
 	/usr/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o -c /cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_a.cpp
 
 CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.i: cmake_force
@@ -89,29 +102,16 @@ CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.s"
 	/usr/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_a.cpp -o CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.s
 
-CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.o: CMakeFiles/CompilationTheory.dir/flags.make
-CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.o: ../HW1/part_b.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.o"
-	/usr/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.o -c /cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_b.cpp
-
-CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.i"
-	/usr/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_b.cpp > CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.i
-
-CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.s"
-	/usr/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_b.cpp -o CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.s
-
 # Object files for target CompilationTheory
 CompilationTheory_OBJECTS = \
-"CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o" \
-"CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.o"
+"CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.o" \
+"CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o"
 
 # External object files for target CompilationTheory
 CompilationTheory_EXTERNAL_OBJECTS =
 
+CompilationTheory.exe: CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.o
 CompilationTheory.exe: CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o
-CompilationTheory.exe: CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.o
 CompilationTheory.exe: CMakeFiles/CompilationTheory.dir/build.make
 CompilationTheory.exe: CMakeFiles/CompilationTheory.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable CompilationTheory.exe"

@@ -82,10 +82,10 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_a.cpp">
+		<Unit filename="/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/lex.yy.c">
 			<Option target="CompilationTheory"/>
 		</Unit>
-		<Unit filename="/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_b.cpp">
+		<Unit filename="/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_a.cpp">
 			<Option target="CompilationTheory"/>
 		</Unit>
 		<Unit filename="/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/tokens.hpp">

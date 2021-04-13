@@ -142,6 +142,33 @@ CompilationTheory/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CompilationTheory.dir/build.make CMakeFiles/CompilationTheory.dir/build
 .PHONY : CompilationTheory/fast
 
+HW1/lex.yy.o: HW1/lex.yy.c.o
+
+.PHONY : HW1/lex.yy.o
+
+# target to build an object file
+HW1/lex.yy.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CompilationTheory.dir/build.make CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.o
+.PHONY : HW1/lex.yy.c.o
+
+HW1/lex.yy.i: HW1/lex.yy.c.i
+
+.PHONY : HW1/lex.yy.i
+
+# target to preprocess a source file
+HW1/lex.yy.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CompilationTheory.dir/build.make CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.i
+.PHONY : HW1/lex.yy.c.i
+
+HW1/lex.yy.s: HW1/lex.yy.c.s
+
+.PHONY : HW1/lex.yy.s
+
+# target to generate assembly for a file
+HW1/lex.yy.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CompilationTheory.dir/build.make CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.s
+.PHONY : HW1/lex.yy.c.s
+
 HW1/part_a.o: HW1/part_a.cpp.o
 
 .PHONY : HW1/part_a.o
@@ -169,33 +196,6 @@ HW1/part_a.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CompilationTheory.dir/build.make CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.s
 .PHONY : HW1/part_a.cpp.s
 
-HW1/part_b.o: HW1/part_b.cpp.o
-
-.PHONY : HW1/part_b.o
-
-# target to build an object file
-HW1/part_b.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/CompilationTheory.dir/build.make CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.o
-.PHONY : HW1/part_b.cpp.o
-
-HW1/part_b.i: HW1/part_b.cpp.i
-
-.PHONY : HW1/part_b.i
-
-# target to preprocess a source file
-HW1/part_b.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/CompilationTheory.dir/build.make CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.i
-.PHONY : HW1/part_b.cpp.i
-
-HW1/part_b.s: HW1/part_b.cpp.s
-
-.PHONY : HW1/part_b.s
-
-# target to generate assembly for a file
-HW1/part_b.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/CompilationTheory.dir/build.make CMakeFiles/CompilationTheory.dir/HW1/part_b.cpp.s
-.PHONY : HW1/part_b.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -205,12 +205,12 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... CompilationTheory"
+	@echo "... HW1/lex.yy.o"
+	@echo "... HW1/lex.yy.i"
+	@echo "... HW1/lex.yy.s"
 	@echo "... HW1/part_a.o"
 	@echo "... HW1/part_a.i"
 	@echo "... HW1/part_a.s"
-	@echo "... HW1/part_b.o"
-	@echo "... HW1/part_b.i"
-	@echo "... HW1/part_b.s"
 .PHONY : help
 
 
