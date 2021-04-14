@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/part_a.cpp
+tokens.hpp
+/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/tokens.hpp
+iostream
+-
+string
+-
+regex
+-
+
+/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1/tokens.hpp
+
