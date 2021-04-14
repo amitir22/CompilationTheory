@@ -1,8 +1,7 @@
 #include "tokens.hpp"
 
 
-int main()
-{
+int main() {
 	int token = yylex();
 
     while(token) {
