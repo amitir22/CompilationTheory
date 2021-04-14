@@ -13,5 +13,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I"/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/../../../Academic/Technion/semesters/semester 4/COMPI - 236360/My/HW/HW1"
 
-CXX_FLAGS = -g -std=gnu++14
+CXX_FLAGS = -g -std=gnu++11
 
