@@ -1,1 +1,0 @@
-/usr/bin/c++.exe -g -Wl,--enable-auto-import CMakeFiles/CompilationTheory.dir/HW1/lex.yy.c.o CMakeFiles/CompilationTheory.dir/HW1/part_a.cpp.o -o CompilationTheory.exe -Wl,--out-implib,libCompilationTheory.dll.a -Wl,--major-image-version,0,--minor-image-version,0 
