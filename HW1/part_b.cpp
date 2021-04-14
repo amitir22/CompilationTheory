@@ -1,5 +1,6 @@
 #include "tokens.hpp"
 
+
 int main()
 {
 	int token = yylex();
