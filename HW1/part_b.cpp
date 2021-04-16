@@ -22,15 +22,11 @@ int main() {
         if (token == -1) {
             char *undefined = yytext;
 
-            if (yyleng == 1) {
-                char invalid_char = undefined[0];
+            char invalid_char = undefined[0];
 
-                cout << "Error: " << invalid_char << endl;
-            }
-            else {
-                // todo: assert? fail?
-                cout << "Something went wrong" << endl;
-            }
+            cout << "Error: " << invalid_char << endl;
+
+            // todo: maybe assert yylength == 1 ?
         }
         else if (token == LPAREN || token == LBRACE) {
             current_indent_count = open_paren_stack.size();
