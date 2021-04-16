@@ -1,6 +1,9 @@
 #ifndef TOKENS_HPP_ 
 #define TOKENS_HPP_
-#include <cstdlib>
+
+#include <string>
+
+using std::string;
 
 enum tokentype { 
 	VOID = 1, 
@@ -36,7 +39,48 @@ enum tokentype {
 	ID = 31,
 	NUM = 32,
 	STRING = 33
-}; 
+};
+
+inline string token_to_string(int token) {
+    string enumToString[34] = {"",
+                               "VOID",
+                               "INT",
+                               "BYTE",
+                               "B",
+                               "BOOL",
+                               "AND",
+                               "OR",
+                               "NOT",
+                               "TRUE",
+                               "FALSE",
+                               "RETURN",
+                               "IF",
+                               "ELSE",
+                               "WHILE",
+                               "BREAK",
+                               "CONTINUE",
+                               "SWITCH",
+                               "CASE",
+                               "DEFAULT",
+                               "COLON",
+                               "SC",
+                               "COMMA",
+                               "LPAREN",
+                               "RPAREN",
+                               "LBRACE",
+                               "RBRACE",
+                               "ASSIGN",
+                               "RELOP",
+                               "BINOP",
+                               "COMMENT",
+                               "ID",
+                               "NUM",
+                               "STRING"};
+
+    return enumToString[token];
+}
+
+
 extern int yylineno;
 extern char* yytext;
 extern int yyleng;

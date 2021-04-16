@@ -1,47 +1,13 @@
-#include "tokens.hpp"
 #include <iostream>
 #include <string>
 #include <regex>
+#include "tokens.hpp"
 
 using std::string;
 using std::cout;
 using std::endl;
 using std::regex;
 
-
-string enumToString[34] = {"","VOID",
-        "INT",
-        "BYTE",
-        "B",
-        "BOOL",
-        "AND",
-        "OR",
-        "NOT",
-        "TRUE",
-        "FALSE",
-        "RETURN",
-        "IF",
-        "ELSE",
-        "WHILE",
-        "BREAK",
-        "CONTINUE",
-        "SWITCH",
-        "CASE",
-        "DEFAULT",
-        "COLON",
-        "SC",
-        "COMMA",
-        "LPAREN",
-        "RPAREN",
-        "LBRACE",
-        "RBRACE",
-        "ASSIGN",
-        "RELOP",
-        "BINOP",
-        "COMMENT",
-        "ID",
-        "NUM",
-        "STRING"};
 
 void illegalLexima(){
     //TODO: Handle error
@@ -60,13 +26,13 @@ int main()
 	        illegalLexima();
 	    }
 	    else if (token == COMMENT){
-            cout << yylineno << " " << enumToString[token] << " //" << endl;
+            cout << yylineno << " " << token_to_string(token) << " //" << endl;
 	    }
 	    else if (token == STRING){
             printString();
 	    }
 	    else{
-            cout << yylineno << " " << enumToString[token] << " " << yytext << endl;
+            cout << yylineno << " " << token_to_string(token) << " " << yytext << endl;
         }
 	}
 	return 0;
