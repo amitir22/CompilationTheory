@@ -40,6 +40,6 @@ enum tokentype {
 extern int yylineno;
 extern char* yytext;
 //extern int yyleng;
-//extern int yylex();
+extern int yylex();
 
 #endif /* TOKENS_HPP_ */

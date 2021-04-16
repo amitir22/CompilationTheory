@@ -5,13 +5,13 @@
 # compile CXX with /usr/bin/c++.exe
 C_DEFINES = 
 
-C_INCLUDES = -I"/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/../../../Academic/Technion/semesters/semester 4/COMPI - 236360/My/HW/HW1"
+C_INCLUDES = -I/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1
 
 C_FLAGS = -g
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I"/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/../../../Academic/Technion/semesters/semester 4/COMPI - 236360/My/HW/HW1"
+CXX_INCLUDES = -I/cygdrive/c/Users/dvir-peretz/Documents/GitHub/CompilationTheory/HW1
 
-CXX_FLAGS = -g -std=gnu++11
+CXX_FLAGS = -Wall -Werror -pedantic -g -std=gnu++11
 
