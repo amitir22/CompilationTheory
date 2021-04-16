@@ -12,6 +12,7 @@ using std::endl;
 
 void print_bad_expression();
 void print_bad_token(int token);
+void print_bad_char(char invalid_char);
 
 int main() {
     stack<int> open_paren_stack;
@@ -24,9 +25,7 @@ int main() {
 
             char invalid_char = undefined[0];
 
-            cout << "Error: " << invalid_char << endl;
-
-            // todo: maybe assert yylength == 1 ?
+            print_bad_char(invalid_char);
         }
         else if (token == LPAREN || token == LBRACE) {
             current_indent_count = open_paren_stack.size();
@@ -90,5 +89,12 @@ void print_bad_expression() {
 
 void print_bad_token(int token) {
     cout << "Error: " << token_to_string(token) << endl;
+    exit(-1);
+}
+
+void print_bad_char(char invalid_char) {
+    cout << "Error: " << invalid_char << endl;
+    // todo: maybe assert yylength == 1 ?
+
     exit(-1);
 }
