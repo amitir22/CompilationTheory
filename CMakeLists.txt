@@ -3,11 +3,7 @@ project(CompilationTheory)
 
 set(CMAKE_CXX_STANDARD 11)
 
-include_directories("HW1")
-
 add_executable(CompilationTheory
         HW1/lex.yy.c
         HW1/part_a.cpp
         HW1/tokens.hpp)
-
-set(CMAKE_CXX_FLAGS "-Wall -Werror -pedantic")
