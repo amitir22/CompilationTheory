@@ -17,6 +17,7 @@ void print_bad_char(char invalid_char);
 int main() {
     stack<int> open_paren_stack;
     size_t current_indent_count;
+    string current_indentation;
     int token;
 
     while((token = yylex())) {
@@ -31,7 +32,7 @@ int main() {
             current_indent_count = open_paren_stack.size();
             open_paren_stack.push(token);
 
-            string current_indentation = string(current_indent_count, '\t');
+            current_indentation = string(current_indent_count, '\t');
 
             char open;
 
@@ -52,7 +53,7 @@ int main() {
             // assuming the only tokens in `open_param_stack` are RPAREN or RBRACE
             if (token - last_open == 1) {
                 current_indent_count = open_paren_stack.size();
-                string current_indentation = string(current_indent_count, '\t');
+                current_indentation = string(current_indent_count, '\t');
 
                 char close;
 
