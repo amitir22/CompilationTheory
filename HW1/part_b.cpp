@@ -46,6 +46,10 @@ int main() {
             cout << current_indentation << open << endl;
         }
         else if (token == RPAREN || token == RBRACE) {
+            if (open_paren_stack.empty()) {
+                print_bad_expression();
+            }
+
             int last_open = open_paren_stack.top();
 
             open_paren_stack.pop();
