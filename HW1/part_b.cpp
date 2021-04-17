@@ -74,7 +74,7 @@ int main() {
                 print_bad_expression();
             }
         }
-        else {
+        else { // means tokenizing was successfull
             print_bad_token(token);
         }
     }
