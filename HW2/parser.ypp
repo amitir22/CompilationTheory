@@ -1,0 +1,18 @@
+{%
+    int yylex();
+    void yyerror(const char*);
+%}
+
+
+
+
+%%
+
+
+
+%%
+
+void yyerror(const char*){cout<<"syntax error"<<endl;}
+int main(){
+    return yyparse();
+}
