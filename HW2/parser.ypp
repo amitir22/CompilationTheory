@@ -10,6 +10,9 @@
 %nonassoc INT;
 %nonassoc BYTE;
 %nonassoc BOOL;
+%nonassoc ID
+%nonassoc NUM
+%nonassoc B;
 %nonassoc TRUE;
 %nonassoc FALSE;
 %nonassoc RETURN;
@@ -37,34 +40,39 @@
 %right NOT
 %right LPAREN
 %right RPAREN
-%nonassoc ID
-%nonassoc NUM
-%nonassoc B;
 
 
 
 %%
 
-Program:    Funcs{output::printProductionRule(1);};
+Program:    Funcs{output::printProductionRule(1);}
+;
 
 Funcs:       {output::printProductionRule(2);} |
-            FuncDecl Funcs {printProductionRule(3);};
+            FuncDecl Funcs {printProductionRule(3);}
+;
 
-FuncDecl:   RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE {printProductionRule(4);};
+FuncDecl:   RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE {printProductionRule(4);}
+;
 
 RetType:    Type {printProductionRule(5);} |
-            VOID {printProductionRule(6);};
+            VOID {printProductionRule(6);}
+;
 
 Formals:    {printProductionRule(7);} |
-            FormalsList {printProductionRule(8);};
+            FormalsList {printProductionRule(8);}
+;
 
 FormalsList: FormalDecl {printProductionRule(9);} |
-             FormalDecl COMMA FormalsList {printProductionRule(10);};
+             FormalDecl COMMA FormalsList {printProductionRule(10);}
+;
 
-FormalDecl:  Type ID {printProductionRule(11);};
+FormalDecl:  Type ID {printProductionRule(11);}
+;
 
 Statements: Statement{output::printProductionRule(12);} |
-             Statements Statement{output::printProductionRule(13);};
+             Statements Statement{output::printProductionRule(13);}
+;
 
 Statement: LBRACE Statements RBRACE{output::printProductionRule(14);} |
             Type ID SC{output::printProductionRule(15);} |
@@ -78,17 +86,21 @@ Statement: LBRACE Statements RBRACE{output::printProductionRule(14);} |
             WHILE LPAREN Exp RPAREN Statement{output::printProductionRule(23);} |
             BREAK SC{output::printProductionRule(24);} |
             CONTINUE SC{output::printProductionRule(25);} |
-            SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE{output::printProductionRule(26);};
+            SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE{output::printProductionRule(26);}
+;
 
 Call: ID LPAREN ExpList RPAREN{output::printProductionRule(27);} |
-       ID LPAREN RPAREN{output::printProductionRule(28);};
+       ID LPAREN RPAREN{output::printProductionRule(28);}
+;
 
 ExpList: Exp{output::printProductionRule(29);} |
-          Exp COMMA ExpList{output::printProductionRule(30);};
+          Exp COMMA ExpList{output::printProductionRule(30);}
+;
 
 Type: INT{output::printProductionRule(31);} |
        BYTE{output::printProductionRule(32);} |
-       BOOL{output::printProductionRule(33);};
+       BOOL{output::printProductionRule(33);}
+;
 
 Exp: LPAREN Exp RPAREN{output::printProductionRule(34);} |
       Exp PLUS_MINUS Exp{output::printProductionRule(35);} |
@@ -105,13 +117,16 @@ Exp: LPAREN Exp RPAREN{output::printProductionRule(34);} |
       Exp OR Exp{output::printProductionRule(45);} |
       Exp EQ Exp{output::printProductionRule(46);} |
       Exp REL Exp{output::printProductionRule(46);} |
-      LPAREN Type RPAREN Exp{output::printProductionRule(47);};
+      LPAREN Type RPAREN Exp{output::printProductionRule(47);}
+;
 
 CaseList: CaseDecl CaseList{output::printProductionRule(48);} |
            CaseDecl{output::printProductionRule(49);} |
-           DEFAULT COLON Statements{output::printProductionRule(50);};
+           DEFAULT COLON Statements{output::printProductionRule(50);}
+;
 
-CaseDecl: CASE NUM COLON Statements{output::printProductionRule(51);};
+CaseDecl: CASE NUM COLON Statements{output::printProductionRule(51);}
+;
 
 %%
 
