@@ -1,6 +1,7 @@
 %{
-    #include output.hpp
-    using namespace std;
+    #include "output.hpp"
+    using namespace output;
+    extern int yylineno;
     int yylex();
     void yyerror(const char*);
 %}
@@ -13,6 +14,7 @@
 %nonassoc FALSE;
 %nonassoc RETURN;
 %nonassoc IF;
+%nonassoc CASE;
 %nonassoc ELSE;
 %nonassoc WHILE;
 %nonassoc BREAK;
@@ -45,7 +47,7 @@
 
 Program:    Funcs{output::printProductionRule(1);};
 
-Funcs:      {output::printProductionRule(2);} |
+Funcs:       {output::printProductionRule(2);} |
             FuncDecl Funcs {printProductionRule(3);};
 
 FuncDecl:   RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE {printProductionRule(4);};
@@ -64,7 +66,7 @@ FormalDecl:  Type ID {printProductionRule(11);};
 Statements: Statement{output::printProductionRule(12);} |
              Statements Statement{output::printProductionRule(13);};
 
-Statement : LBRACE Statements RBRACE{output::printProductionRule(14);} |
+Statement: LBRACE Statements RBRACE{output::printProductionRule(14);} |
             Type ID SC{output::printProductionRule(15);} |
             Type ID ASSIGN Exp SC{output::printProductionRule(16);} |
             ID ASSIGN Exp SC{output::printProductionRule(17);} |
@@ -78,19 +80,19 @@ Statement : LBRACE Statements RBRACE{output::printProductionRule(14);} |
             CONTINUE SC{output::printProductionRule(25);} |
             SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE{output::printProductionRule(26);};
 
-Call : ID LPAREN ExpList RPAREN{output::printProductionRule(27);} |
+Call: ID LPAREN ExpList RPAREN{output::printProductionRule(27);} |
        ID LPAREN RPAREN{output::printProductionRule(28);};
 
-ExpList : Exp{output::printProductionRule(29);} |
+ExpList: Exp{output::printProductionRule(29);} |
           Exp COMMA ExpList{output::printProductionRule(30);};
 
-Type : INT{output::printProductionRule(31);} |
+Type: INT{output::printProductionRule(31);} |
        BYTE{output::printProductionRule(32);} |
        BOOL{output::printProductionRule(33);};
 
-Exp : LPAREN Exp RPAREN{output::printProductionRule(34);} |
-      Exp ADD_SUB_BINOP Exp{output::printProductionRule(35);} |
-      Exp MUL_DIV_BINOP Exp{output::printProductionRule(35);} |
+Exp: LPAREN Exp RPAREN{output::printProductionRule(34);} |
+      Exp PLUS_MINUS Exp{output::printProductionRule(35);} |
+      Exp MUL_DIV Exp{output::printProductionRule(35);} |
       ID{output::printProductionRule(36);} |
       Call{output::printProductionRule(37);} |
       NUM{output::printProductionRule(38);} |
@@ -101,15 +103,15 @@ Exp : LPAREN Exp RPAREN{output::printProductionRule(34);} |
       NOT Exp{output::printProductionRule(43);} |
       Exp AND Exp{output::printProductionRule(44);} |
       Exp OR Exp{output::printProductionRule(45);} |
-      Exp EQ_NEQ_RELOP Exp{output::printProductionRule(46);} |
-      Exp REL_RELOP Exp{output::printProductionRule(46);} |
+      Exp EQ Exp{output::printProductionRule(46);} |
+      Exp REL Exp{output::printProductionRule(46);} |
       LPAREN Type RPAREN Exp{output::printProductionRule(47);};
 
-CaseList : CaseDecl CaseList{output::printProductionRule(48);} |
+CaseList: CaseDecl CaseList{output::printProductionRule(48);} |
            CaseDecl{output::printProductionRule(49);} |
            DEFAULT COLON Statements{output::printProductionRule(50);};
 
-CaseDecl : CASE NUM COLON Statements{output::printProductionRule(51);};
+CaseDecl: CASE NUM COLON Statements{output::printProductionRule(51);};
 
 %%
 

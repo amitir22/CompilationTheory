@@ -29,8 +29,8 @@ whitespace  ([\t\n\r ])
 (if)                                return IF;
 (else)                              return ELSE;
 (while)                             return WHILE;
-(break)                             return BREAK;
 (continue)                          return CONTINUE;
+(break)                             return BREAK;
 (switch)                            return SWITCH;
 (case)                              return CASE;
 (default)                           return DEFAULT;
@@ -43,11 +43,12 @@ whitespace  ([\t\n\r ])
 (\})                                return RBRACE;
 (=)                                 return ASSIGN;
 ((==)|(!=))                         return EQ;
-((\<=)|(\>=)|(\<)|(\>))             return REL
+((\<=)|(\>=)|(\<)|(\>))             return REL;
 ((\+)|(\-))                         return PLUS_MINUS;
 ((\*)|(\/))                         return MUL_DIV;
 ({letter}({letter}|{digit})*)       return ID;
 (0|{nozerodigit}{digit}*)           return NUM;
+(\/\/[^\r\n]*(\r|\n|\r\n)?)         ;
 (\"([^\n\r\"\\]|\\[rnt"\\])+\")     return STRING;
 .                                   {output::errorLex(yylineno);exit(-1);}
 
