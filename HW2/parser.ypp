@@ -1,4 +1,6 @@
-{%
+%{
+    #include output.hpp
+    using namespace std;
     int yylex();
     void yyerror(const char*);
 %}
@@ -6,7 +8,6 @@
 %nonassoc VOID;
 %nonassoc INT;
 %nonassoc BYTE;
-%nonassoc B;
 %nonassoc BOOL;
 %nonassoc TRUE;
 %nonassoc FALSE;
@@ -21,22 +22,99 @@
 %nonassoc COLON
 %nonassoc SC;
 %nonassoc COMMA;
-%nonassoc ID;
-%nonassoc NUM;
 %nonassoc STRING;
+%nonassoc LBRACE
+%nonassoc RBRACE
 %right ASSIGN
 %left OR
-
+%left AND
+%left EQ
+%nonassoc REL
+%left PLUS_MINUS
+%left MUL_DIV
+%right NOT
+%right LPAREN
+%right RPAREN
+%nonassoc ID
+%nonassoc NUM
+%nonassoc B;
 
 
 
 %%
 
+Program:    Funcs{output::printProductionRule(1);};
 
+Funcs:      {output::printProductionRule(2);} |
+            FuncDecl Funcs {printProductionRule(3);};
+
+FuncDecl:   RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE {printProductionRule(4);};
+
+RetType:    Type {printProductionRule(5);} |
+            VOID {printProductionRule(6);};
+
+Formals:    {printProductionRule(7);} |
+            FormalsList {printProductionRule(8);};
+
+FormalsList: FormalDecl {printProductionRule(9);} |
+             FormalDecl COMMA FormalsList {printProductionRule(10);};
+
+FormalDecl:  Type ID {printProductionRule(11);};
+
+Statements: Statement{output::printProductionRule(12);} |
+             Statements Statement{output::printProductionRule(13);};
+
+Statement : LBRACE Statements RBRACE{output::printProductionRule(14);} |
+            Type ID SC{output::printProductionRule(15);} |
+            Type ID ASSIGN Exp SC{output::printProductionRule(16);} |
+            ID ASSIGN Exp SC{output::printProductionRule(17);} |
+            Call SC{output::printProductionRule(18);} |
+            RETURN SC{output::printProductionRule(19);} |
+            RETURN Exp SC{output::printProductionRule(20);} |
+            IF LPAREN Exp RPAREN Statement %prec IF {output::printProductionRule(21);} |
+            IF LPAREN Exp RPAREN Statement ELSE Statement{output::printProductionRule(22);} |
+            WHILE LPAREN Exp RPAREN Statement{output::printProductionRule(23);} |
+            BREAK SC{output::printProductionRule(24);} |
+            CONTINUE SC{output::printProductionRule(25);} |
+            SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE{output::printProductionRule(26);};
+
+Call : ID LPAREN ExpList RPAREN{output::printProductionRule(27);} |
+       ID LPAREN RPAREN{output::printProductionRule(28);};
+
+ExpList : Exp{output::printProductionRule(29);} |
+          Exp COMMA ExpList{output::printProductionRule(30);};
+
+Type : INT{output::printProductionRule(31);} |
+       BYTE{output::printProductionRule(32);} |
+       BOOL{output::printProductionRule(33);};
+
+Exp : LPAREN Exp RPAREN{output::printProductionRule(34);} |
+      Exp ADD_SUB_BINOP Exp{output::printProductionRule(35);} |
+      Exp MUL_DIV_BINOP Exp{output::printProductionRule(35);} |
+      ID{output::printProductionRule(36);} |
+      Call{output::printProductionRule(37);} |
+      NUM{output::printProductionRule(38);} |
+      NUM B{output::printProductionRule(39);} |
+      STRING{output::printProductionRule(40);} |
+      TRUE{output::printProductionRule(41);} |
+      FALSE{output::printProductionRule(42);} |
+      NOT Exp{output::printProductionRule(43);} |
+      Exp AND Exp{output::printProductionRule(44);} |
+      Exp OR Exp{output::printProductionRule(45);} |
+      Exp EQ_NEQ_RELOP Exp{output::printProductionRule(46);} |
+      Exp REL_RELOP Exp{output::printProductionRule(46);} |
+      LPAREN Type RPAREN Exp{output::printProductionRule(47);};
+
+CaseList : CaseDecl CaseList{output::printProductionRule(48);} |
+           CaseDecl{output::printProductionRule(49);} |
+           DEFAULT COLON Statements{output::printProductionRule(50);};
+
+CaseDecl : CASE NUM COLON Statements{output::printProductionRule(51);};
 
 %%
 
-void yyerror(const char*){cout<<"syntax error"<<endl;}
+void yyerror(const char*){errorSyn(yylineno);}
+
 int main(){
     return yyparse();
 }

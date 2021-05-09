@@ -42,7 +42,6 @@ whitespace  ([\t\n\r ])
 (\{)                                return LBRACE;
 (\})                                return RBRACE;
 (=)                                 return ASSIGN;
-(\/\/[^\n\r]+)                      return COMMENT;
 ((==)|(!=))                         return EQ;
 ((\<=)|(\>=)|(\<)|(\>))             return REL
 ((\+)|(\-))                         return PLUS_MINUS;
