@@ -9,12 +9,9 @@ _PP_FILES='*.%pp'
 CXX_FILES='*.cxx'
 HEADERS='*.h*'
 LEX_FILE='scanner.lex'
-EXE_FILE='hw3'
-FLEX_OUTPUT_FILE='lex.yy.c'
-BISON_OUTPUT_FILE='parser.tab.*pp'
-MAKEFILE='Makefile'
 
-FILES='$(C_FILES) $(_PP_FILES) $(CXX_FILES) $(HEADERS) $(LEX_FILE) $(EXE_FILE) $(FLEX_OUTPUT_FILE)\
- $(BISON_OUTPUT_FILE) $(MAKEFILE)'
+# todo: exclude 'hw3', flex files and bison files.
+
+FILES='$(C_FILES) $(_PP_FILES) $(CXX_FILES) $(HEADERS) $(LEX_FILE)'
 
 zip $(ZIP_NAME) $(FILES)
