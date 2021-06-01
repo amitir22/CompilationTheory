@@ -1,136 +1,561 @@
 %{
-    #include "output.hpp"
-    using namespace output;
-    extern int yylineno;
-    int yylex();
-    void yyerror(const char*);
+	#include <iostream>
+    #include <sstream>
+	#include <stdlib.h>
+	#include "Symbol_Table.h"
+	#define YYSTYPE struct parser
+
+	using namespace std;
+
+	extern int yylex();
+	extern int yyparse();
+	extern int yylineno;
+	int yyerror(const char * message);
+	SymbolTableStack* tableStack;
+
 %}
 
-%nonassoc VOID;
-%nonassoc INT;
-%nonassoc BYTE;
-%nonassoc BOOL;
-%nonassoc ID
-%nonassoc NUM
-%nonassoc B;
-%nonassoc TRUE;
-%nonassoc FALSE;
-%nonassoc RETURN;
-%nonassoc IF;
-%nonassoc CASE;
-%nonassoc ELSE;
-%nonassoc WHILE;
-%nonassoc BREAK;
-%nonassoc CONTINUE;
-%nonassoc SWITCH
-%nonassoc DEFAULT
-%nonassoc COLON
-%nonassoc SC;
-%nonassoc COMMA;
-%nonassoc STRING;
-%nonassoc LBRACE
-%nonassoc RBRACE
 %right ASSIGN
 %left OR
 %left AND
-%left EQ
-%nonassoc REL
-%left PLUS_MINUS
-%left MUL_DIV
+%left EQOP
+%nonassoc RELOP
+%left ADDOP
+%left MULOP
+%token VOID
+%token INT
+%token BOOL
 %right NOT
-%right LPAREN
+%token TRUE
+%token FALSE
+%token RETURN
+%token IF
+%token WHILE
+%token BREAK
+%token CONTINUE
+%token SC
+%right COMMA
+%token LPAREN
 %right RPAREN
-
-
-
-%%
-
-Program:    Funcs{output::printProductionRule(1);}
-;
-
-Funcs:       {output::printProductionRule(2);} |
-            FuncDecl Funcs {printProductionRule(3);}
-;
-
-FuncDecl:   RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE {printProductionRule(4);}
-;
-
-RetType:    Type {printProductionRule(5);} |
-            VOID {printProductionRule(6);}
-;
-
-Formals:    {printProductionRule(7);} |
-            FormalsList {printProductionRule(8);}
-;
-
-FormalsList: FormalDecl {printProductionRule(9);} |
-             FormalDecl COMMA FormalsList {printProductionRule(10);}
-;
-
-FormalDecl:  Type ID {printProductionRule(11);}
-;
-
-Statements: Statement{output::printProductionRule(12);} |
-             Statements Statement{output::printProductionRule(13);}
-;
-
-Statement: LBRACE Statements RBRACE{output::printProductionRule(14);} |
-            Type ID SC{output::printProductionRule(15);} |
-            Type ID ASSIGN Exp SC{output::printProductionRule(16);} |
-            ID ASSIGN Exp SC{output::printProductionRule(17);} |
-            Call SC{output::printProductionRule(18);} |
-            RETURN SC{output::printProductionRule(19);} |
-            RETURN Exp SC{output::printProductionRule(20);} |
-            IF LPAREN Exp RPAREN Statement %prec IF {output::printProductionRule(21);} |
-            IF LPAREN Exp RPAREN Statement ELSE Statement{output::printProductionRule(22);} |
-            WHILE LPAREN Exp RPAREN Statement{output::printProductionRule(23);} |
-            BREAK SC{output::printProductionRule(24);} |
-            CONTINUE SC{output::printProductionRule(25);} |
-            SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE{output::printProductionRule(26);}
-;
-
-Call: ID LPAREN ExpList RPAREN{output::printProductionRule(27);} |
-       ID LPAREN RPAREN{output::printProductionRule(28);}
-;
-
-ExpList: Exp{output::printProductionRule(29);} |
-          Exp COMMA ExpList{output::printProductionRule(30);}
-;
-
-Type: INT{output::printProductionRule(31);} |
-       BYTE{output::printProductionRule(32);} |
-       BOOL{output::printProductionRule(33);}
-;
-
-Exp: LPAREN Exp RPAREN{output::printProductionRule(34);} |
-      Exp PLUS_MINUS Exp{output::printProductionRule(35);} |
-      Exp MUL_DIV Exp{output::printProductionRule(35);} |
-      ID{output::printProductionRule(36);} |
-      Call{output::printProductionRule(37);} |
-      NUM{output::printProductionRule(38);} |
-      NUM B{output::printProductionRule(39);} |
-      STRING{output::printProductionRule(40);} |
-      TRUE{output::printProductionRule(41);} |
-      FALSE{output::printProductionRule(42);} |
-      NOT Exp{output::printProductionRule(43);} |
-      Exp AND Exp{output::printProductionRule(44);} |
-      Exp OR Exp{output::printProductionRule(45);} |
-      Exp EQ Exp{output::printProductionRule(46);} |
-      Exp REL Exp{output::printProductionRule(46);} |
-;
-
-CaseList: CaseDecl CaseList{output::printProductionRule(48);} |
-           CaseDecl{output::printProductionRule(49);} |
-           DEFAULT COLON Statements{output::printProductionRule(50);}
-;
-
-CaseDecl: CASE NUM COLON Statements{output::printProductionRule(51);}
-;
+%token LBRACE
+%right RBRACE
+%token ID
+%token NUM
 
 %%
 
-void yyerror(const char*){errorSyn(yylineno);}
+Program	:	{ 
+                tableStack = new SymbolTableStack();
+                tableStack->SymbolTableStack::addScope(new SymbolTable(0));
+                vector<struct param>* printiArg = new vector<struct param>();
+                struct param intArg;
+                intArg.name = "intArg", intArg.type = "INT";
+                printiArg->push_back(intArg);
+                tableStack->scopes.back()->addFunctionToTable("printi", "VOID", printiArg);
+            }
+            Funcs CheckMain CloseScope
+		
+CheckMain:  {
+                struct symbol element = tableStack->SymbolTableStack::getElement("main");
+                if (element.type != "VOID" || !element.isFunction || element.listParams)
+                {
+                    output::errorMainMissing();
+                }
+            }
 
-int main(){
-    return yyparse();
+Funcs:  	FuncDecl Funcs {}
+
+Funcs:		/* epsilon */ {}
+
+FuncStart:  RetType ID 
+            {
+                struct symbol element = tableStack->SymbolTableStack::getElement($2.var_name);
+                if (element.type != "NONE")
+                {
+                    output::errorDef(yylineno, $2.var_name);
+                }
+                $$.var_name = $2.var_name;
+                $$.type = $1.type;
+            }
+
+FuncDecl:	FuncStart LPAREN Formals RPAREN LBRACE 
+            {
+                tableStack->scopes.back()->addFunctionToTable($1.var_name, $1.type, $3.listParams);
+                tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
+                tableStack->scopes.back()->scopeType = "FUNC";
+                int i = 0;
+                struct symbol funcArg;
+                if ($3.listParams != nullptr)
+                {
+                    for (auto it = $3.listParams->cbegin(); it != $3.listParams->cend();it++)
+                    {
+                        funcArg = tableStack->SymbolTableStack::getElement((*it).name);
+                        if (funcArg.type != "NONE")
+                        {
+                            output::errorDef(yylineno, (*it).name);
+                        }
+                        tableStack->scopes.back()->SymbolTable::addVariableToTable((*it).name, (*it).type, --i);
+                    }
+                }
+            } 
+            Statements RBRACE CloseScope
+
+OpenScope:  {
+            tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
+            }
+
+CloseScope: {
+            output::endScope();
+            tableStack->SymbolTableStack::exitScope();
+            }
+
+RetType	:	Type {
+                $$.type = $1.type;
+            }
+
+RetType	:	VOID {
+                $$.type = "VOID";
+            }
+
+Formals	:	/* epsilon */ {}
+
+Formals	:	FormalsList 
+            {
+		        $$.listParams = $1.listParams;
+		        if($$.listParams->size() > 1) $$.listParams->pop_back();
+	    	}
+
+FormalsList:	FormalDecl 
+                {
+                    if($$.listParams->empty())
+                    {
+                        $$.listParams = $1.listParams;
+                    } 
+                    else if ($1.listParams->cbegin() != $1.listParams->cend()) 
+                    {
+                        $$.listParams->insert($$.listParams->cend(), $1.listParams->cbegin(), $1.listParams->cend());
+                    }
+                }
+
+FormalsList:	FormalDecl COMMA FormalsList 
+                {
+                    if($$.listParams->empty())
+                    {
+                        $$.listParams = $1.listParams;
+                    }
+                    else if ($3.listParams->cbegin() != $3.listParams->cend()) 
+                    {
+                        $$.listParams->insert($$.listParams->cend(), $3.listParams->cbegin(), $3.listParams->cend());
+                    }
+			    }
+
+FormalDecl:	Type ID 
+            {
+                struct symbol element = tableStack->SymbolTableStack::getElement($2.var_name);
+                if (element.type != "NONE")
+                {
+                    output::errorDef(yylineno, $2.var_name);
+                }
+                struct param a;
+                a.name = $2.var_name;
+                a.type = $1.type;
+                if (!$$.listParams)
+                {
+                    $$.listParams = new std::vector<struct param>();
+                }
+                $$.listParams->push_back(a);
+            }
+
+Statements:	Statements Statement {}
+
+Statements:	Statement {}
+
+Statement:	LBRACE 
+            { 
+                tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
+            }
+            Statements RBRACE 
+            {
+                output::endScope();
+                tableStack->SymbolTableStack::exitScope();
+            }
+
+Statement:	Type ID SC 
+            {
+                struct symbol element = tableStack->SymbolTableStack::getElement($2.var_name);
+                if (element.type != "NONE")
+                {
+                    output::errorDef(yylineno, $2.var_name);
+                }
+			    tableStack->scopes.back()->SymbolTable::addVariableToTable($2.var_name, $1.type, tableStack->scopes.back()->tableOffset);
+			}
+
+Statement:	Type ID ASSIGN Exp SC 
+            {
+                struct symbol element = tableStack->SymbolTableStack::getElement($2.var_name);
+                if (element.type != "NONE")
+                {
+                    output::errorDef(yylineno, $2.var_name);
+                }
+                if ($4.type != $1.type )
+                {
+                    output::errorMismatch(yylineno);
+                }
+                tableStack->scopes.back()->SymbolTable::addVariableToTable($2.var_name, $1.type, tableStack->scopes.back()->tableOffset);
+            }
+
+Statement:	ID ASSIGN Exp SC
+            {
+                struct symbol element = tableStack->SymbolTableStack::getElement($1.var_name);
+                if (element.type == "NONE" || element.isFunction)
+                {
+                    output::errorUndef(yylineno, $1.var_name);
+                }
+                if (element.type != $3.type )
+                {
+                    output::errorMismatch(yylineno);
+                }
+            }
+
+Statement:	Call SC 
+            {
+                $$.type = $1.type; $$.listParams = $1.listParams;
+            }
+
+Statement:	RETURN SC
+            {
+			    string retType = tableStack->SymbolTableStack::getLastDefinedFunction();
+                if (retType != "VOID")
+                {
+                    output::errorMismatch(yylineno);
+                }
+			    $$.type = "VOID";
+			}
+
+Statement:	RETURN Exp SC
+            {
+			    string retType = tableStack->SymbolTableStack::getLastDefinedFunction();
+                if ((retType != $2.type ) || $2.type == "VOID")
+                {
+                    output::errorMismatch(yylineno);
+                }
+			    $$.type = $2.type;
+			}
+
+Statement:	IF LPAREN Exp 
+            {
+                if ($3.type != "BOOL")
+                {
+                    output::errorMismatch(yylineno);
+                }
+            }
+			RPAREN OpenScope 
+            { 
+                tableStack->scopes.back()->scopeType = "IF"; 
+            } 
+            Statement CloseScope
+
+Statement:	WHILE LPAREN Exp {
+                if ($3.type != "BOOL")
+                {
+                    output::errorMismatch(yylineno);
+                }
+            }
+			RPAREN OpenScope
+            {
+                tableStack->scopes.back()->scopeType = "WHILE";
+            }
+            Statement CloseScope
+
+Statement:	BREAK SC
+            {
+                // todo: add possibility of isInsideCase()
+			    if (!tableStack->isInsideWhile())
+                {
+                    output::errorUnexpectedBreak(yylineno);
+			    }
+			}
+            
+Statement:	CONTINUE SC
+            {
+                if (!tableStack->isInsideWhile())
+                {
+                    output::errorUnexpectedContinue(yylineno);
+                }
+			}
+
+Statement:  SWITCH LPAREN Exp RPAREN LBRACE
+            {
+                tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
+            }
+            CaseList RBRACE
+            {
+                // TODO:
+                output::endScope();
+                tableStack->SymbolTableStack::exitScope();
+            }
+
+Call:   	ID LPAREN ExpList RPAREN
+            {
+                if($3.listParams->size() > 1) $3.listParams->pop_back();
+                struct symbol func = tableStack->SymbolTableStack::getElement($1.var_name);
+                if (func.type == "NONE" || !func.isFunction)
+                {
+                    output::errorUndefFunc(yylineno, $1.var_name);
+                }
+                std::vector<struct param>* funcArgs = func.listParams;
+                std::vector<string> argTypes;
+                for (int i=0; i < funcArgs->size(); i++)
+                {
+                    argTypes.push_back(funcArgs->at(i).type);
+                }
+                if (!SymbolTable::listParamIsValid(func, $3.listParams))
+                {
+                    output::errorPrototypeMismatch(yylineno, $1.var_name, argTypes);
+                }
+                $$.var_name = func.name;
+                $$.type = func.type;
+                $$.listParams = func.listParams;
+                delete $3.listParams;
+            }
+
+Call:   	ID LPAREN RPAREN
+            {
+                struct symbol func = tableStack->SymbolTableStack::getElement($1.var_name);
+                if (func.type == "NONE" || !func.isFunction)
+                {
+                    output::errorUndefFunc(yylineno, $1.var_name);
+                }
+                vector<struct param>* funcArgs = func.listParams;
+                if (funcArgs && !funcArgs->empty())
+                {
+                    vector<string> argTypes;
+                    for (int i=0; i < funcArgs->size(); i++)
+                    {
+                        argTypes.push_back(funcArgs->at(i).type);
+                    }
+                    output::errorPrototypeMismatch(yylineno, $1.var_name, argTypes);
+                }
+				$$.var_name = func.name;
+                $$.type = func.type;
+                $$.listParams = func.listParams;
+		    }
+
+ExpList:	Exp COMMA ExpList
+            {
+                if($$.listParams->empty())
+                {
+                    $$.listParams = $1.listParams;
+                }
+                else if ($3.listParams->cbegin() != $3.listParams->cend())
+                {
+                    $$.listParams->insert($$.listParams->cend(), $3.listParams->cbegin(), $3.listParams->cend());
+                }
+            }
+
+ExpList:	Exp
+            {
+                if($$.listParams->empty())
+                {
+                    $$.listParams = $1.listParams;
+				}
+                else if ($1.listParams->cbegin() != $1.listParams->cend())
+                {
+                    $$.listParams->insert($$.listParams->cend(), $1.listParams->cbegin(), $1.listParams->cend());
+                }
+		    }
+
+Type:		INT
+            {
+                $$.type = "INT";
+            }
+
+            //todo: is there supposed to be a BYTE type too?
+
+Type:		BOOL
+            {
+                $$.type = "BOOL";
+            }
+
+Exp:    	LPAREN Exp RPAREN
+            {
+                $$ = $2;
+            }
+
+Exp:    	Exp ADDOP Exp
+            {
+                if ( $1.type != "INT"  || $3.type != "INT" )
+                {
+                    output::errorMismatch(yylineno);
+                }
+                $$.type = "INT";
+            }
+
+Exp:    	Exp MULOP Exp
+            {
+                if ( $1.type != "INT"  || $3.type != "INT" )
+                {
+                    output::errorMismatch(yylineno);
+                }
+                $$.type = "INT";
+            }
+
+Exp:    	ID
+            {
+                struct symbol element = tableStack->SymbolTableStack::getElement($1.var_name);
+                if (element.type == "NONE")
+                {
+                    output::errorUndef(yylineno, $1.var_name);
+                }
+                $$.var_name = $1.var_name;
+                $$.type = element.type;
+                struct param a;
+                a.name = element.name;
+                a.type = element.type;
+                if (!$$.listParams)
+                {
+                    $$.listParams = new vector<struct param>();
+                }
+                $$.listParams->push_back(a);
+		    }
+
+Exp:    	Call
+            {
+                struct param a;
+                a.name = $1.var_name;
+                a.type = $1.type;
+                $$.listParams = new vector<struct param>();
+                $$.listParams->push_back(a);
+            }
+
+Exp:    	NUM
+            {
+                $$.var_name = "#";
+                $$.type = "INT";
+                struct param a;
+                a.name = $1.var_name;
+                a.type = "INT";
+                if (!$$.listParams)
+                {
+                    $$.listParams = new vector<struct param>();
+                }
+                $$.listParams->push_back(a);
+		    }
+
+Exp:		TRUE
+            {
+		        $$.var_name = "#";
+                $$.type = "BOOL";
+                struct param a;
+                a.name = $1.var_name;
+                a.type = "BOOL";
+                if (!$$.listParams)
+                {
+                    $$.listParams = new vector<struct param>();
+                }
+                $$.listParams->push_back(a);
+            }
+
+Exp:		FALSE
+            {
+		        $$.var_name = "#";
+                $$.type = "BOOL";
+                struct param a;
+                a.name = $1.var_name;
+                a.type = "BOOL";
+                if (!$$.listParams)
+                {
+                    $$.listParams = new vector<struct param>();
+                }
+                $$.listParams->push_back(a);
+            }
+
+Exp:		NOT Exp
+            {
+                if ($2.type != "BOOL")
+                {
+                    output::errorMismatch(yylineno);
+                }
+                $$.type = "BOOL";
+                struct param a;
+                a.name = "NOT";
+                a.type = "BOOL";
+                if (!$$.listParams)
+                {
+                    $$.listParams = new vector<struct param>();
+                }
+                $$.listParams->push_back(a);
+            }
+
+Exp:		Exp AND Exp
+            {
+                if ($1.type != "BOOL" || $3.type != "BOOL")
+                {
+                    output::errorMismatch(yylineno);
+                }
+                $$.type = "BOOL";
+                $$.listParams = $1.listParams;
+            }
+
+Exp:		Exp OR Exp
+            {
+                if ($1.type != "BOOL" || $3.type != "BOOL")
+                {
+                    output::errorMismatch(yylineno);
+                }
+                $$.type = "BOOL";
+                $$.listParams = $1.listParams;
+            }
+
+Exp:	 	Exp EQOP Exp
+            {
+                if ( $1.type != "INT"  || $3.type != "INT" )
+                {
+                    output::errorMismatch(yylineno);
+                }
+                $$.type = "BOOL";
+                $$.listParams->back().type = "BOOL";
+            }
+
+Exp:		Exp RELOP Exp
+            {
+                if ( $1.type != "INT"  || $3.type != "INT" )
+                {
+                    output::errorMismatch(yylineno);
+                }
+                $$.type = "BOOL";
+                $$.listParams->back().type = "BOOL";
+            }
+
+CaseList:   CaseDecl CaseList
+            {
+                // todo:
+            }
+
+CaseList:   CaseDecl
+            {
+                // todo:
+            }
+
+CaseList:   DEFAULT COLON Statements
+            {
+                // todo:
+            }
+
+CaseDecl:   CASE NUM COLON Statements
+            {
+                // todo: need to match the type of Exp in switch with the types of \
+                         the cases
+            }
+
+%%
+
+int main()
+{
+	yyparse();
+}
+
+int yyerror(const char * message)
+{
+	output::errorSyn(yylineno);
 }

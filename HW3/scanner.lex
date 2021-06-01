@@ -1,55 +1,54 @@
 %{
-    #include "output.hpp"
-    #include "parser.tab.hpp"
+
+#include "parser.h"
+#define YYSTYPE struct parser
+
+#include <stdio.h>
+#include "tokens.hpp"
+#include "parser.tab.hpp"
+#include "hw3_output.hpp"
+
 %}
 
 %option yylineno
 %option noyywrap
 
-
-digit   ([0-9])
-nozerodigit ([1-9])
-letter  ([a-zA-Z])
-whitespace  ([\t\n\r ])
-
+relop			(<|>|<=|>=)
+eqop			(==|!=)
+addop			([+-])
+mulop			([*/])
 
 %%
-{whitespace}                        ;
-(void)                              return VOID;
-(int)                               return INT;
-(byte)                              return BYTE;
-(b)                                 return B;
-(bool)                              return BOOL;
-(and)                               return AND;
-(or)                                return OR;
-(not)                               return NOT;
-(true)                              return TRUE;
-(false)                             return FALSE;
-(return)                            return RETURN;
-(if)                                return IF;
-(else)                              return ELSE;
-(while)                             return WHILE;
-(continue)                          return CONTINUE;
-(break)                             return BREAK;
-(switch)                            return SWITCH;
-(case)                              return CASE;
-(default)                           return DEFAULT;
-(\:)                                return COLON;
-(\;)                                return SC;
-(\,)                                return COMMA;
-(\()                                return LPAREN;
-(\))                                return RPAREN;
-(\{)                                return LBRACE;
-(\})                                return RBRACE;
-(=)                                 return ASSIGN;
-((==)|(!=))                         return EQ;
-((\<=)|(\>=)|(\<)|(\>))             return REL;
-((\+)|(\-))                         return PLUS_MINUS;
-((\*)|(\/))                         return MUL_DIV;
-({letter}({letter}|{digit})*)       return ID;
-(0|{nozerodigit}{digit}*)           return NUM;
-(\/\/[^\r\n]*(\r|\n|\r\n)?)         ;
-(\"([^\n\r\"\\]|\\[rnt"\\])+\")     return STRING;
-.                                   {output::errorLex(yylineno);exit(-1);}
+
+void    										return VOID;
+int												return INT;
+bool											return BOOL;
+and    											return AND;
+or    											return OR;
+not    											return NOT;
+true    										return TRUE;
+false    										return FALSE;
+return     										return RETURN;
+if						    					return IF;
+while    										return WHILE;
+break    										return BREAK;
+continue    									return CONTINUE;
+;						    					return SC;
+,    											return COMMA;
+\(    											return LPAREN;
+\)    											return RPAREN;
+\{    											return LBRACE;
+\}    											return RBRACE;
+=						    					return ASSIGN;
+{relop}					    					return RELOP;
+{eqop}											return EQOP;
+{addop}					    					return ADDOP;
+{mulop}											return MULOP;
+[a-zA-Z][0-9a-zA-Z]*							{yylval.var_name = yytext; return ID; }
+([1-9][0-9]*|[0])				    			return NUM;
+[/][/]+[^\r\n]*[\r|\n|\r\n]?                    ;
+[ \n\t\r]                                       ;
+.	                                            output::errorLex(yylineno);
 
 %%
+
