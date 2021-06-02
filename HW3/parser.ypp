@@ -12,9 +12,9 @@
 	extern int yylineno;
 	int yyerror(const char * message);
 	SymbolTableStack* tableStack;
-
 %}
 
+/* todo: maybe add a %token SWITCH,CASE,DEFAULT */
 %right ASSIGN
 %left OR
 %left AND
@@ -101,12 +101,12 @@ FuncDecl:	FuncStart LPAREN Formals RPAREN LBRACE
             Statements RBRACE CloseScope
 
 OpenScope:  {
-            tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
+                tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
             }
 
 CloseScope: {
-            output::endScope();
-            tableStack->SymbolTableStack::exitScope();
+                output::endScope();
+                tableStack->SymbolTableStack::exitScope();
             }
 
 RetType	:	Type {
@@ -269,8 +269,7 @@ Statement:	WHILE LPAREN Exp {
 
 Statement:	BREAK SC
             {
-                // todo: add possibility of isInsideCase()
-			    if (!tableStack->isInsideWhile())
+			    if (!tableStack->isInsideWhile() && !tableStack->isInsideSwitch())
                 {
                     output::errorUnexpectedBreak(yylineno);
 			    }
@@ -284,16 +283,11 @@ Statement:	CONTINUE SC
                 }
 			}
 
-Statement:  SWITCH LPAREN Exp RPAREN LBRACE
+Statement:  SWITCH LPAREN Exp RPAREN LBRACE OpenScope
             {
-                tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
+                tableStack->scopes.back()->scopeType = "SWITCH"
             }
-            CaseList RBRACE
-            {
-                // TODO:
-                output::endScope();
-                tableStack->SymbolTableStack::exitScope();
-            }
+            CaseList RBRACE CloseScope
 
 Call:   	ID LPAREN ExpList RPAREN
             {
@@ -370,7 +364,7 @@ Type:		INT
                 $$.type = "INT";
             }
 
-            //todo: is there supposed to be a BYTE type too?
+            // todo: is there supposed to be a BYTE type too?
 
 Type:		BOOL
             {
@@ -527,24 +521,15 @@ Exp:		Exp RELOP Exp
                 $$.listParams->back().type = "BOOL";
             }
 
-CaseList:   CaseDecl CaseList
-            {
-                // todo:
-            }
+CaseList:   CaseDecl CaseList { /* todo: */ }
 
-CaseList:   CaseDecl
-            {
-                // todo:
-            }
+CaseList:   CaseDecl { /* todo: */ }
 
-CaseList:   DEFAULT COLON Statements
-            {
-                // todo:
-            }
+CaseList:   DEFAULT COLON Statements { /* todo: */ }
 
 CaseDecl:   CASE NUM COLON Statements
             {
-                // todo: need to match the type of Exp in switch with the types of \
+                // todo: maybe need to match the type of Exp in switch with the types of \
                          the cases
             }
 

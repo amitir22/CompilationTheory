@@ -1,7 +1,3 @@
-//
-// Created by Michael on 01-Jun-20.
-//
-
 #ifndef SYMBOL_TABLE_H_
 #define SYMBOL_TABLE_H_
 
@@ -66,6 +62,7 @@ public:
     struct symbol getElement(string name);
     string getLastDefinedFunction();
     bool isInsideWhile();
+    bool isInsideSwitch();
 };
 
 
