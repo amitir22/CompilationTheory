@@ -532,7 +532,7 @@ CaseList:   DEFAULT COLON Statements { /* todo: */ }
 
 CaseDecl:   CASE NUM COLON Statements
             {
-                // todo: maybe need to match the type of Exp in switch with the types of \
+                // todo: maybe need to match the type of NUM in switch with the types of \
                          the cases
             }
 
