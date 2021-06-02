@@ -133,7 +133,7 @@ bool SymbolTableStack::isInsideSwitch() {
 
     do {
         it--;
-        if ((*it)->scopeType == "CASE" || (*it)->scopeType == "DEFAULT") {
+        if ((*it)->scopeType == "SWITCH") {
             return true;
         }
     } while (it != scopes.begin());
