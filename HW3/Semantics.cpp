@@ -1,12 +1,7 @@
-//
-// Created by 1912m on 12/05/2021.
-//
-
-#include "Semantics.h"
-
-#include "iostream"
+#include <iostream>
 #include <memory>
 #include <cstring>
+#include "Semantics.h"
 
 extern char *yytext;
 int DEBUG = 0;
@@ -15,6 +10,9 @@ vector<int> offsetStack;
 vector<string> varTypes = {"VOID", "INT", "BYTE", "BOOL", "STRING"};
 
 string currentRunningFunctionScopeId;
+
+int loopCounter = 0;
+bool inSwitch = false;
 
 void printVector(vector<string> vec) {
     for (auto &i : vec) {
@@ -41,9 +39,6 @@ void printSymTableStack() {
         }
     }
 }
-
-int loopCounter = 0;
-bool inSwitch = false;
 
 void enterSwitch() {
     if (DEBUG) printMessage("Entering Switch block");

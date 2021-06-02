@@ -1,15 +1,10 @@
-//
-// Created by 1912m on 12/05/2021.
-//
-
 #ifndef HW3_SEMANTICS_H
 #define HW3_SEMANTICS_H
 
 #include <memory>
-#include "vector"
+#include <vector>
 #include <string>
 #include <utility>
-#include <ostream>
 #include "hw3_output.hpp"
 
 extern int yylineno;
@@ -17,23 +12,14 @@ extern char * yytext;
 using namespace std;
 
 void enterSwitch();
-
 void exitSwitch();
-
 void enterLoop();
-
 void exitLoop();
-
 void exitProgramFuncs();
-
 void exitProgramRuntime();
-
 void openNewScope();
-
 void closeCurrentScope();
-
 void printMessage(string message);
-
 bool isDeclared(const string &name);
 bool isDeclaredVariable(const string &name);
 

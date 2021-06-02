@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#	link to makefile:
+#	link to Makefile:
 makefileurl="https://webcourse.cs.technion.ac.il/fc159753hw_236360_202002/hw/WCFiles/Makefile"
 #	link to tests:
 testsurl="https://webcourse.cs.technion.ac.il/fc159753hw_236360_202002/hw/WCFiles/hw3-tests.zip"
