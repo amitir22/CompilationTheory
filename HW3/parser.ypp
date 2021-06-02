@@ -269,6 +269,7 @@ Statement:	WHILE LPAREN Exp {
 
 Statement:	BREAK SC
             {
+                /* todo: dvir */
 			    if (!tableStack->isInsideWhile() && !tableStack->isInsideSwitch())
                 {
                     output::errorUnexpectedBreak(yylineno);
@@ -283,6 +284,7 @@ Statement:	CONTINUE SC
                 }
 			}
 
+/* todo: dvir */
 Statement:  SWITCH LPAREN Exp RPAREN LBRACE OpenScope
             {
                 tableStack->scopes.back()->scopeType = "SWITCH"
@@ -521,6 +523,7 @@ Exp:		Exp RELOP Exp
                 $$.listParams->back().type = "BOOL";
             }
 
+/* todo: dvir */
 CaseList:   CaseDecl CaseList { /* todo: */ }
 
 CaseList:   CaseDecl { /* todo: */ }

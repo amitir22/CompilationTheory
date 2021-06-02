@@ -126,6 +126,7 @@ bool SymbolTableStack::isInsideWhile() {
     return false;
 }
 
+/* todo: dvir */
 // todo: test
 bool SymbolTableStack::isInsideSwitch() {
     vector<SymbolTable *>::iterator it = scopes.end();
