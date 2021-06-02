@@ -1,11 +1,13 @@
-#ifndef HW3_SEMANTICS_H
-#define HW3_SEMANTICS_H
+#ifndef HW3_SEMANTICS_HANDLER_H
+#define HW3_SEMANTICS_HANDLER_H
 
 #include <memory>
 #include <vector>
 #include <string>
 #include <utility>
 #include "hw3_output.hpp"
+
+#define YYSTYPE Variable*
 
 extern int yylineno;
 extern char * yytext;
@@ -22,6 +24,19 @@ void closeCurrentScope();
 void printMessage(string message);
 bool isDeclared(const string &name);
 bool isDeclaredVariable(const string &name);
+
+class Variable {
+public:
+    string value;
+
+    explicit Variable(string str);
+
+    Variable();
+
+    virtual ~Variable() = default;
+
+    friend ostream &operator<<(ostream &os, const Variable &node);
+};
 
 // Single row in the table of a scope
 class SymbolTableRow {
@@ -45,36 +60,21 @@ public:
     SymbolTable() = default;
 };
 
-class TypeNode {
+class Type : public Variable {
 public:
-    string value;
-
-    explicit TypeNode(string str);
-
-    TypeNode();
-
-    virtual ~TypeNode() = default;
-
-    friend ostream &operator<<(ostream &os, const TypeNode &node);
-};
-
-#define YYSTYPE TypeNode*
-
-class Type : public TypeNode {
-public:
-    explicit Type(TypeNode *type);
+    explicit Type(Variable *type);
 };
 
 class Call;
 
-class Exp : public TypeNode {
+class Exp : public Variable {
 public:
     // Type is used for tagging in bison when creating the Exp object
     string type;
     bool valueAsBooleanValue;
 
     // This is for NUM, NUM B, STRING, TRUE and FALSE
-    Exp(TypeNode *terminal, string taggedTypeFromParser);
+    Exp(Variable *terminal, string taggedTypeFromParser);
 
     // for Call
     explicit Exp(Call *call);
@@ -83,19 +83,19 @@ public:
     Exp(Exp *e1, string tag);
 
     // for NOT Exp
-    Exp(TypeNode *notNode, Exp *exp);
+    Exp(Variable *notNode, Exp *exp);
 
     // for Exp RELOP, MUL, DIV, ADD, SUB, OR, AND Exp
-    Exp(Exp *e1, TypeNode *op, Exp *e2, const string &taggedTypeFromParser);
+    Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedTypeFromParser);
 
     // for Exp ID
-    explicit Exp(TypeNode *id);
+    explicit Exp(Variable *id);
 
     // for Lparen Exp Rparen, need to just remove the parentheses
     Exp(Exp *ex);
 };
 
-class ExpList : public TypeNode {
+class ExpList : public Variable {
 public:
     vector<Exp> list;
 
@@ -104,16 +104,16 @@ public:
     ExpList(Exp *exp, ExpList *expList);
 };
 
-class Call : public TypeNode {
+class Call : public Variable {
 public:
-    Call(TypeNode *id, ExpList *list);
+    Call(Variable *id, ExpList *list);
 
-    explicit Call(TypeNode *id);
+    explicit Call(Variable *id);
 };
 
-class RetType : public TypeNode {
+class RetType : public Variable {
 public:
-    explicit RetType(TypeNode *type);
+    explicit RetType(Variable *type);
 };
 
 class Statements;
@@ -121,7 +121,7 @@ class Statements;
 class CaseList;
 
 
-class Statement : public TypeNode {
+class Statement : public Variable {
 public:
     string dataTag;
 
@@ -129,13 +129,13 @@ public:
     explicit Statement(Statements *states);
 
     // For Type ID SC
-    Statement(Type *t, TypeNode *id);
+    Statement(Type *t, Variable *id);
 
     // For Type ID Assign Exp SC
-    Statement(Type *t, TypeNode *id, Exp *exp);
+    Statement(Type *t, Variable *id, Exp *exp);
 
     // For ID Assign Exp SC
-    Statement(TypeNode *id, Exp *exp);
+    Statement(Variable *id, Exp *exp);
 
     // For Call SC
     explicit Statement(Call *call);
@@ -150,13 +150,13 @@ public:
     Statement(string type, Exp *exp);
 
     // For break,continue
-    explicit Statement(TypeNode *type);
+    explicit Statement(Variable *type);
 
     // For Switch LParen Exp RParen Lbrace CaseList Rbrace
     Statement(Exp *exp, CaseList *cList);
 };
 
-class Statements : public TypeNode {
+class Statements : public Variable {
 public:
     // For Statement
     explicit Statements(Statement *state);
@@ -165,14 +165,13 @@ public:
     Statements(Statements *states, Statement *state);
 };
 
-class CaseDecl : public TypeNode {
+class CaseDecl : public Variable {
 public:
     // For Case Num Colon Statements
     CaseDecl(Exp *num, Statements *states);
-    //CaseDecl(TypeNode *num, Statements *states);
 };
 
-class CaseList : public TypeNode {
+class CaseList : public Variable {
 public:
     vector<CaseDecl *> cases;
 
@@ -186,16 +185,16 @@ public:
     explicit CaseList(Statements *states);
 };
 
-class FormalDecl : public TypeNode {
+class FormalDecl : public Variable {
 public:
     // The parameter type
     string type;
 
     // for Type ID
-    FormalDecl(Type *t, TypeNode *id);
+    FormalDecl(Type *t, Variable *id);
 };
 
-class FormalsList : public TypeNode {
+class FormalsList : public Variable {
 public:
     vector<FormalDecl *> formals;
 
@@ -206,7 +205,7 @@ public:
     FormalsList(FormalDecl *formal, FormalsList *fList);
 };
 
-class Formals : public TypeNode {
+class Formals : public Variable {
 public:
     vector<FormalDecl *> formals;
 
@@ -217,24 +216,24 @@ public:
     explicit Formals(FormalsList *formList);
 };
 
-class FuncDecl : public TypeNode {
+class FuncDecl : public Variable {
 public:
     // This is an array to denote the types of the func parameters, with the func return type being the last elemtn of the array
     vector<string> type;
 
-    FuncDecl(RetType *rType, TypeNode *id, Formals *funcParams);
+    FuncDecl(RetType *rType, Variable *id, Formals *funcParams);
 };
 
-class Funcs : public TypeNode {
+class Funcs : public Variable {
 public:
     Funcs();
 };
 
-class Program : public TypeNode {
+class Program : public Variable {
 public:
     Program();
 };
 
 void insertFunctionParameters(Formals *formals);
 
-#endif //HW3_SEMANTICS_H
+#endif //HW3_SEMANTICS_HANDLER_H

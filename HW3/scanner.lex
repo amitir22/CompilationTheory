@@ -1,7 +1,7 @@
 %{
 /* Declarations section */
 #include <stdio.h>
-#include "Semantics.h"
+#include "SemanticsHandler.h"
 #include "parser.tab.hpp"
 #include "hw3_output.hpp"
 %}
@@ -16,42 +16,42 @@ letter  ([a-zA-Z])
 whitespace  ([\t\n\r ])
 
 %%
-(void)                                  yylval=new TypeNode(yytext); return VOID;
-(int)                                   yylval=new TypeNode(yytext); return INT;
-(byte)                                  yylval=new TypeNode(yytext); return BYTE;
-(b)                                     yylval=new TypeNode(yytext); return B;
-(bool)                                  yylval=new TypeNode(yytext); return BOOL;
-(and)                                   yylval=new TypeNode(yytext); return AND;
-(or)                                    yylval=new TypeNode(yytext); return OR;
-(not)                                   yylval=new TypeNode(yytext); return NOT;
-(true)                                  yylval=new TypeNode(yytext); return TRUE;
-(false)                                 yylval=new TypeNode(yytext); return FALSE;
-(return)                                yylval=new TypeNode(yytext); return RETURN;
-(if)                                    yylval=new TypeNode(yytext); return IF;
-(else)                                  yylval=new TypeNode(yytext); return ELSE;
-(while)                                 yylval=new TypeNode(yytext); return WHILE;
-(continue)                              yylval=new TypeNode(yytext); return CONTINUE;
-(break)                                 yylval=new TypeNode(yytext); return BREAK;
-(switch)                                yylval=new TypeNode(yytext); return SWITCH;
-(case)                                  yylval=new TypeNode(yytext); return CASE;
-(default)                               yylval=new TypeNode(yytext); return DEFAULT;
-(\:)                                    yylval=new TypeNode(yytext); return COLON;
-(\;)                                    yylval=new TypeNode(yytext); return SC;
-(\,)                                    yylval=new TypeNode(yytext); return COMMA;
-(\()                                    yylval=new TypeNode(yytext); return LPAREN;
-(\))                                    yylval=new TypeNode(yytext); return RPAREN;
-(\{)                                    yylval=new TypeNode(yytext); return LBRACE;
-(\})                                    yylval=new TypeNode(yytext); return RBRACE;
-(=)                                     yylval=new TypeNode(yytext); return ASSIGN;
-((==)|(!=))                             yylval=new TypeNode(yytext); return EQ_NEQ_RELOP;
-((\<=)|(\>=)|(\<)|(\>))                 yylval=new TypeNode(yytext); return REL_RELOP;
-((\+)|(\-))                             yylval=new TypeNode(yytext); return ADD_SUB_BINOP;
-((\*)|(\/))                             yylval=new TypeNode(yytext); return MUL_DIV_BINOP;
-(\/\/[^\r\n]*(\r|\n|\r\n)?)              ;
-({letter}({letter}|{digit})*)           yylval=new TypeNode(yytext); return ID;
-(0|{nozerodigit}{digit}*)               yylval=new TypeNode(yytext); return NUM;
-{whitespace}                             ;
-(\"([^\n\r\"\\]|\\[rnt"\\])+\")         yylval=new TypeNode(yytext); return STRING;
-.                                       output::errorLex(yylineno); exit(0);
+(void)                              yylval=new Variable(yytext); return VOID;
+(int)                               yylval=new Variable(yytext); return INT;
+(byte)                              yylval=new Variable(yytext); return BYTE;
+(b)                                 yylval=new Variable(yytext); return B;
+(bool)                              yylval=new Variable(yytext); return BOOL;
+(and)                               yylval=new Variable(yytext); return AND;
+(or)                                yylval=new Variable(yytext); return OR;
+(not)                               yylval=new Variable(yytext); return NOT;
+(true)                              yylval=new Variable(yytext); return TRUE;
+(false)                             yylval=new Variable(yytext); return FALSE;
+(return)                            yylval=new Variable(yytext); return RETURN;
+(if)                                yylval=new Variable(yytext); return IF;
+(else)                              yylval=new Variable(yytext); return ELSE;
+(while)                             yylval=new Variable(yytext); return WHILE;
+(continue)                          yylval=new Variable(yytext); return CONTINUE;
+(break)                             yylval=new Variable(yytext); return BREAK;
+(switch)                            yylval=new Variable(yytext); return SWITCH;
+(case)                              yylval=new Variable(yytext); return CASE;
+(default)                           yylval=new Variable(yytext); return DEFAULT;
+(\:)                                yylval=new Variable(yytext); return COLON;
+(\;)                                yylval=new Variable(yytext); return SC;
+(\,)                                yylval=new Variable(yytext); return COMMA;
+(\()                                yylval=new Variable(yytext); return LPAREN;
+(\))                                yylval=new Variable(yytext); return RPAREN;
+(\{)                                yylval=new Variable(yytext); return LBRACE;
+(\})                                yylval=new Variable(yytext); return RBRACE;
+(=)                                 yylval=new Variable(yytext); return ASSIGN;
+((==)|(!=))                         yylval=new Variable(yytext); return EQ_NEQ_RELOP;
+((\<=)|(\>=)|(\<)|(\>))             yylval=new Variable(yytext); return REL_RELOP;
+((\+)|(\-))                         yylval=new Variable(yytext); return ADD_SUB_BINOP;
+((\*)|(\/))                         yylval=new Variable(yytext); return MUL_DIV_BINOP;
+(\/\/[^\r\n]*(\r|\n|\r\n)?)          ;
+({letter}({letter}|{digit})*)       yylval=new Variable(yytext); return ID;
+(0|{nozerodigit}{digit}*)           yylval=new Variable(yytext); return NUM;
+{whitespace}                         ;
+(\"([^\n\r\"\\]|\\[rnt"\\])+\")     yylval=new Variable(yytext); return STRING;
+.                                   output::errorLex(yylineno); exit(0);
 
 %%

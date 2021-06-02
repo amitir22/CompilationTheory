@@ -2,7 +2,7 @@
 /* Declarations section */
     #include <iostream>
     #include <stdlib.h>
-    #include "Semantics.h"
+    #include "SemanticsHandler.h"
     #include "hw3_output.hpp"
 
     using namespace std;
@@ -63,8 +63,9 @@ Program :       {
 Funcs :         %prec SECOND_PRIOR
                 {
                     $$ = new Funcs();
-                } |
-                FuncDecl Funcs %prec FIRST_PRIOR
+                }
+
+Funcs :         FuncDecl Funcs %prec FIRST_PRIOR
                 {
                     $$ = new Funcs();
                 }
@@ -72,10 +73,10 @@ Funcs :         %prec SECOND_PRIOR
 FuncDecl:       RetType ID LPAREN Formals RPAREN
                 {
                     $$ = new FuncDecl(dynamic_cast<RetType*>($1),$2,dynamic_cast<Formals*>($4));
-                } LBRACE OS
+                } LBRACE OpenScope
                 {
                     insertFunctionParameters(dynamic_cast<Formals*>($4));
-                } Statements CS
+                } Statements CloseScope
                 {
                     exitProgramFuncs();
                 } RBRACE
@@ -83,16 +84,18 @@ FuncDecl:       RetType ID LPAREN Formals RPAREN
 RetType:        Type
                 {
                     $$ = new RetType(dynamic_cast<Type*>($1));
-                } |
-                VOID
+                }
+
+RetType:        VOID
                 {
                     $$ = new RetType($1);
                 }
 
 Formals:        {
                     $$ = new Formals();
-                } |
-                FormalsList
+                }
+
+Formals:        FormalsList
                 {
                     $$ = new Formals(dynamic_cast<FormalsList*>($1));
                 }
@@ -100,8 +103,9 @@ Formals:        {
 FormalsList:    FormalDecl
                 {
                     $$ = new FormalsList(dynamic_cast<FormalDecl*>($1));
-                } |
-                FormalDecl COMMA FormalsList
+                }
+
+FormalsList:    FormalDecl COMMA FormalsList
                 {
                     $$ = new FormalsList(dynamic_cast<FormalDecl*>($1), dynamic_cast<FormalsList*>($3));
                 }
@@ -114,76 +118,89 @@ FormalDecl:     Type ID
 Statements:     Statement
                 {
                     $$ = new Statements(dynamic_cast<Statement*>($1));
-                } |
-                Statements Statement
+                }
+
+Statements:     Statements Statement
                 {
                     $$ = new Statements(dynamic_cast<Statements*>($1), dynamic_cast<Statement*>($2));
                 }
 
-Statement:      LBRACE OS Statements CS RBRACE
+Statement:      LBRACE OpenScope Statements CloseScope RBRACE
                 {
                     $$ = new Statement(dynamic_cast<Statements*>($3));
-                } |
-                Type ID SC
+                }
+
+Statement:      Type ID SC
                 {
                     $$ = new Statement(dynamic_cast<Type*>($1),$2);
-                } |
-                Type ID ASSIGN Exp SC
+                }
+
+Statement:      Type ID ASSIGN Exp SC
                 {
                     $$ = new Statement(dynamic_cast<Type*>($1),$2, dynamic_cast<Exp*>($4));
-                } |
-                ID ASSIGN Exp SC
+                }
+
+Statement:      ID ASSIGN Exp SC
                 {
                     $$ = new Statement($1, dynamic_cast<Exp*>($3));
-                } |
-                Call SC
+                }
+
+Statement:      Call SC
                 {
                     $$ = new Statement(dynamic_cast<Call*>($1));
-                } |
-                RETURN SC
+                }
+
+Statement:      RETURN SC
                 {
                     $$ = new Statement("VOID");
-                } |
-                RETURN Exp SC
+                }
+
+Statement:      RETURN Exp SC
                 {
                     $$ = new Statement(dynamic_cast<Exp*>($2));
-                } |
-                IF LPAREN Exp RPAREN OS Statement %prec IF
+                }
+
+Statement:      IF LPAREN Exp RPAREN OpenScope Statement %prec IF
                 {
                     $$ = new Statement("if", dynamic_cast<Exp*>($3));
                     closeCurrentScope();
-                } |
-                IF LPAREN Exp RPAREN OS Statement ELSE
+                }
+
+Statement:      IF LPAREN Exp RPAREN OpenScope Statement ELSE
                 {
                     $$ = new Statement("if else", dynamic_cast<Exp*>($3));
                     closeCurrentScope();
-                } OS Statement CS |
-                WHILE LPAREN Exp RPAREN
+                } OpenScope Statement CloseScope
+
+Statement:      WHILE LPAREN Exp RPAREN
                 {
                     $$ = new Statement("while", dynamic_cast<Exp*>($3));
                     enterLoop();
-                } OS Statement CS
+                } OpenScope Statement CloseScope
                 {
                     exitLoop();
-                } |
-                BREAK SC
+                }
+
+Statement:      BREAK SC
                 {
                     $$ = new Statement($1);
-                } |
-                CONTINUE SC
+                }
+
+Statement:      CONTINUE SC
                 {
                     $$ = new Statement($1);
-                } |
-                SWITCH
+                }
+
+Statement:      SWITCH
                 {
                     enterSwitch();
                 } LPAREN Exp
                 {
                     new Exp(dynamic_cast<Exp*>($4), "switch");
-                } RPAREN LBRACE OS CaseList
+                } RPAREN LBRACE OpenScope CaseList
                 {
                     $$ = new Statement(dynamic_cast<Exp*>($4), dynamic_cast<CaseList*>($9));
-                } CS
+                } CloseScope
                 {
                     exitSwitch();
                 } RBRACE
@@ -191,8 +208,9 @@ Statement:      LBRACE OS Statements CS RBRACE
 Call:           ID LPAREN ExpList RPAREN
                 {
                     $$ = new Call($1, dynamic_cast<ExpList*>($3));
-                } |
-                ID LPAREN RPAREN
+                }
+
+Call:           ID LPAREN RPAREN
                 {
                     $$ = new Call($1);
                 }
@@ -200,8 +218,9 @@ Call:           ID LPAREN ExpList RPAREN
 ExpList:        Exp
                 {
                     $$ = new ExpList(dynamic_cast<Exp*>($1));
-                } |
-                Exp COMMA ExpList
+                }
+
+ExpList:        Exp COMMA ExpList
                 {
                     $$ = new ExpList(dynamic_cast<Exp*>($1), dynamic_cast<ExpList*>($3));
                 }
@@ -209,12 +228,14 @@ ExpList:        Exp
 Type:           INT
                 {
                     $$ = new Type($1);
-                } |
-                BYTE
+                }
+
+Type:           BYTE
                 {
                     $$ = new Type($1);
-                } |
-                BOOL
+                }
+
+Type:           BOOL
                 {
                     $$ = new Type($1);
                 }
@@ -222,60 +243,74 @@ Type:           INT
 Exp:            LPAREN Exp RPAREN
                 {
                     $$ = new Exp(dynamic_cast<Exp*>($2));
-                } |
-                Exp ADD_SUB_BINOP Exp
+                }
+
+Exp:            Exp ADD_SUB_BINOP Exp
                 {
                     $$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "ADD_SUB_BINOP");
-                } |
-                Exp MUL_DIV_BINOP Exp
+                }
+
+Exp:            Exp MUL_DIV_BINOP Exp
                 {
                     $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "MUL_DIV_BINOP");
-                } |
-                ID
+                }
+
+Exp:            ID
                 {
                     $$ = new Exp($1);
-                } |
-                Call
+                }
+
+Exp:            Call
                 {
                     $$ = new Exp(dynamic_cast<Call*>($1));
-                } |
-                NUM
+                }
+
+Exp:            NUM
                 {
                     $$ = new Exp($1, "NUM");
-                } |
-                NUM B
+                }
+
+Exp:            NUM B
                 {
                     $$ = new Exp($1, "BYTE");
-                } |
-                STRING
+                }
+
+Exp:            STRING
                 {
                     $$ = new Exp($1, "STRING");
-                } |
-                TRUE
+                }
+
+Exp:            TRUE
                 {
                     $$ = new Exp($1, "BOOL");
-                } |
-                FALSE
+                }
+
+Exp:            FALSE
                 {
                     $$ = new Exp($1, "BOOL");
-                } |
-                NOT Exp
+                }
+
+Exp:            NOT Exp
                 {
                     $$ = new Exp($1, dynamic_cast<Exp*>($2));
-                } |
-                Exp AND Exp
+                }
+
+Exp:            Exp AND Exp
                 {
                     $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "AND");
-                } |
-                Exp OR Exp
+                }
+
+Exp:            Exp OR Exp
                 {
                     $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "OR");
-                } |
-                Exp EQ_NEQ_RELOP Exp
+                }
+
+Exp:            Exp EQ_NEQ_RELOP Exp
                 {
                     $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "EQ_NEQ_RELOP");
-                } |
-                Exp REL_RELOP Exp
+                }
+
+Exp:            Exp REL_RELOP Exp
                 {
                     $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "REL_RELOP");
                 }
@@ -283,12 +318,14 @@ Exp:            LPAREN Exp RPAREN
 CaseList:       CaseDecl CaseList
                 {
                     $$ = new CaseList(dynamic_cast<CaseDecl*>($1), dynamic_cast<CaseList*>($2));
-                } |
-                CaseDecl
+                }
+
+CaseList:       CaseDecl
                 {
                     $$ = new CaseList(dynamic_cast<CaseDecl*>($1));
-                } |
-                DEFAULT COLON Statements
+                }
+
+CaseList:       DEFAULT COLON Statements
                 {
                     $$ = new CaseList(dynamic_cast<Statements*>($3));
                 }
@@ -298,11 +335,11 @@ CaseDecl:       CASE NUM COLON Statements
                     $$ = new CaseDecl(new Exp($2, "NUM"), dynamic_cast<Statements*>($4));
                 }
 
-OS:             {
+OpenScope:      {
                     openNewScope();
                 }
 
-CS:             {
+CloseScope:     {
                     closeCurrentScope();
                 }
 

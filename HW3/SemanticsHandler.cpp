@@ -1,10 +1,9 @@
 #include <iostream>
 #include <memory>
 #include <cstring>
-#include "Semantics.h"
+#include "SemanticsHandler.h"
 
 extern char *yytext;
-int DEBUG = 0;
 vector<shared_ptr<SymbolTable>> symTabStack;
 vector<int> offsetStack;
 vector<string> varTypes = {"VOID", "INT", "BYTE", "BOOL", "STRING"};
@@ -41,12 +40,10 @@ void printSymTableStack() {
 }
 
 void enterSwitch() {
-    if (DEBUG) printMessage("Entering Switch block");
     inSwitch = true;
 }
 
 void exitSwitch() {
-    if (DEBUG) printMessage("Exiting Switch block");
     inSwitch = false;
 }
 
@@ -63,9 +60,6 @@ void exitProgramFuncs() {
 }
 
 void exitProgramRuntime() {
-    if (DEBUG) {
-        printMessage("I am entering program runtime");
-    }
     shared_ptr<SymbolTable> globalScope = symTabStack.front();
     bool mainFunc = false;
     for (auto &row : globalScope->rows) {
@@ -78,15 +72,12 @@ void exitProgramRuntime() {
         exit(0);
     }
     closeCurrentScope();
-    if (DEBUG) printMessage("I am exiting program runtime");
 }
 
 void openNewScope() {
-    if (DEBUG) printMessage("creating scope");
     shared_ptr<SymbolTable> nScope = make_shared<SymbolTable>();
     symTabStack.push_back(nScope);
     offsetStack.push_back(offsetStack.back());
-    if (DEBUG) printMessage("done creating");
 }
 
 void closeCurrentScope() {
@@ -112,47 +103,33 @@ void closeCurrentScope() {
 }
 
 bool isDeclared(const string &name) {
-    if (DEBUG) {
-        printMessage("In is declared for");
-        printMessage(name);
-        printSymTableStack();
-    }
     for (int i = symTabStack.size() - 1; i >= 0; --i) {
         for (auto &row : symTabStack[i]->rows) {
             if (row->name == name) {
-                if (DEBUG) printMessage("found id");
                 return true;
             }
         }
     }
-    if (DEBUG) printMessage("can't find id");
+
     return false;
 }
 
 bool isDeclaredVariable(const string &name) {
-    if (DEBUG) {
-        printMessage("In is declared for");
-        printMessage(name);
-        printSymTableStack();
-    }
     for (int i = symTabStack.size() - 1; i >= 0; --i) {
         for (auto &row : symTabStack[i]->rows) {
             if (row->name == name && !row->isFunc) {
-                if (DEBUG) printMessage("found id");
                 return true;
             }
         }
     }
-    if (DEBUG) printMessage("can't find id");
+
     return false;
 }
 
-SymbolTableRow::SymbolTableRow(string name, vector<string> type, int offset, bool isFunc) : name(std::move(name)), type(std::move(type)),
-                                                                                            offset(offset), isFunc(isFunc) {
+SymbolTableRow::SymbolTableRow(string name, vector<string> type, int offset, bool isFunc)
+    : name(std::move(name)), type(std::move(type)), offset(offset), isFunc(isFunc) { }
 
-}
-
-TypeNode::TypeNode(string str) : value() {
+Variable::Variable(string str) : value() {
     if (str == "void") {
         value = "VOID";
     } else if (str == "bool") {
@@ -166,16 +143,16 @@ TypeNode::TypeNode(string str) : value() {
     }
 }
 
-TypeNode::TypeNode() {
+Variable::Variable() {
     value = "";
 }
 
-ostream &operator<<(ostream &os, const TypeNode &node) {
+ostream &operator<<(ostream &os, const Variable &node) {
     os << "value: " << node.value;
     return os;
 }
 
-Program::Program() : TypeNode("Program") {
+Program::Program() : Variable("Program") {
     shared_ptr<SymbolTable> symTab = std::make_shared<SymbolTable>();
     shared_ptr<SymbolTableRow> printFunc = std::make_shared<SymbolTableRow>(SymbolTableRow("print", {"STRING", "VOID"}, 0, true));
     shared_ptr<SymbolTableRow> printiFunc = std::make_shared<SymbolTableRow>(SymbolTableRow("printi", {"INT", "VOID"}, 0, true));
@@ -188,15 +165,15 @@ Program::Program() : TypeNode("Program") {
     offsetStack.push_back(0);
 }
 
-RetType::RetType(TypeNode *type) : TypeNode(type->value) {
+RetType::RetType(Variable *type) : Variable(type->value) {
 
 }
 
-Type::Type(TypeNode *type) : TypeNode(type->value) {
+Type::Type(Variable *type) : Variable(type->value) {
 
 }
 
-FormalDecl::FormalDecl(Type *t, TypeNode *id) : TypeNode(id->value), type(t->value) {
+FormalDecl::FormalDecl(Type *t, Variable *id) : Variable(id->value), type(t->value) {
 
 }
 
@@ -215,8 +192,7 @@ Formals::Formals(FormalsList *formList) {
     formals = vector<FormalDecl *>(formList->formals);
 }
 
-FuncDecl::FuncDecl(RetType *rType, TypeNode *id, Formals *funcParams) {
-    if (DEBUG) printMessage("I am in func decl");
+FuncDecl::FuncDecl(RetType *rType, Variable *id, Formals *funcParams) {
     if (isDeclared(id->value)) {
         // Trying to redeclare a name that is already used for a different variable/fucntion
         output::errorDef(yylineno, id->value);
@@ -257,10 +233,9 @@ FuncDecl::FuncDecl(RetType *rType, TypeNode *id, Formals *funcParams) {
     shared_ptr<SymbolTableRow> nFunc = std::make_shared<SymbolTableRow>(value, type, 0, true);
     symTabStack.back()->rows.push_back(nFunc);
     currentRunningFunctionScopeId = value;
-    if (DEBUG) printMessage("exiting func decl");
 }
 
-Call::Call(TypeNode *id) {
+Call::Call(Variable *id) {
     for (auto &symTab : symTabStack) {
         for (auto &row : symTab->rows) {
             if (row->name == id->value) {
@@ -286,8 +261,7 @@ Call::Call(TypeNode *id) {
     exit(0);
 }
 
-Call::Call(TypeNode *id, ExpList *list) {
-    if (DEBUG) printMessage("in call id list");
+Call::Call(Variable *id, ExpList *list) {
     for (auto &symTab : symTabStack) {
         for (auto &row : symTab->rows) {
             if (row->name == id->value) {
@@ -331,17 +305,12 @@ Call::Call(TypeNode *id, ExpList *list) {
 
 Exp::Exp(Call *call) {
     // Need to just take the return value of the function and use it as the return type of the expression
-    if (DEBUG) printMessage("in exp call");
     value = call->value;
     type = call->value;
 }
 
-Exp::Exp(TypeNode *id) {
+Exp::Exp(Variable *id) {
     // Need to make sure that the variable/func we want to use is declared
-    if (DEBUG) {
-        printMessage("creating exp from id:");
-        printMessage(id->value);
-    }
     if (!isDeclaredVariable(id->value)) {
         output::errorUndef(yylineno, id->value);
         exit(0);
@@ -351,10 +320,6 @@ Exp::Exp(TypeNode *id) {
     for (int i = symTabStack.size() - 1; i >= 0; --i) {
         for (auto &row : symTabStack[i]->rows) {
             if (row->name == id->value) {
-                if (DEBUG) {
-                    printMessage("found a variable with name in symtab:");
-                    printMessage(row->name);
-                }
                 // We found the variable/func we wanted to use in the expression
                 value = id->value;
                 // Getting the type of the variable, or the return type of the function
@@ -365,7 +330,7 @@ Exp::Exp(TypeNode *id) {
     }
 }
 
-Exp::Exp(TypeNode *notNode, Exp *exp) {
+Exp::Exp(Variable *notNode, Exp *exp) {
     if (exp->type != "BOOL") {
         // This is not a boolean expression, can't apply NOT
         output::errorMismatch(yylineno);
@@ -375,14 +340,7 @@ Exp::Exp(TypeNode *notNode, Exp *exp) {
     valueAsBooleanValue = !valueAsBooleanValue;
 }
 
-Exp::Exp(TypeNode *terminal, string taggedTypeFromParser) : TypeNode(terminal->value) {
-    if (DEBUG) {
-        printMessage("in for num byte");
-        printMessage(terminal->value);
-        printMessage("tagged type:");
-        printMessage(taggedTypeFromParser);
-
-    }
+Exp::Exp(Variable *terminal, string taggedTypeFromParser) : Variable(terminal->value) {
     type = taggedTypeFromParser;
     if (taggedTypeFromParser == "NUM") {
         type = "INT";
@@ -402,29 +360,16 @@ Exp::Exp(TypeNode *terminal, string taggedTypeFromParser) : TypeNode(terminal->v
             valueAsBooleanValue = false;
         }
     }
-    if (DEBUG) {
-        printMessage("now tagged as:");
-        printMessage(type);
-    }
 }
 
 Exp::Exp(Exp *ex) {
-    if (DEBUG) {
-        printMessage("=====exp ex=====");
-        printMessage(ex->value);
-        printMessage(ex->type);
-    }
-//    if (ex->type != "BOOL") {
-//        output::errorMismatch(yylineno);
-//        exit(0);
-//    }
     value = ex->value;
     type = ex->type;
     valueAsBooleanValue = ex->valueAsBooleanValue;
 }
 
 // for Exp RELOP, MUL, DIV, ADD, SUB, OR, AND Exp
-Exp::Exp(Exp *e1, TypeNode *op, Exp *e2, const string &taggedTypeFromParser) {
+Exp::Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedTypeFromParser) {
     // Need to check the type of the expressions on each side, to make sure that a logical operator (AND/OR) is used on a boolean type
     if ((e1->type == "INT" || e1->type == "BYTE") && (e2->type == "INT" || e2->type == "BYTE")) {
         if (taggedTypeFromParser == "EQ_NEQ_RELOP" || taggedTypeFromParser == "REL_RELOP") {
@@ -482,12 +427,7 @@ ExpList::ExpList(Exp *exp, ExpList *expList) {
     list.insert(list.begin(), exp);
 }
 
-Statement::Statement(TypeNode *type) {
-    if (DEBUG) {
-        printMessage("In BREAK/CONTINUE");
-        printMessage(type->value);
-        printMessage(to_string(yylineno));
-    }
+Statement::Statement(Variable *type) {
     if (loopCounter == 0 && !inSwitch) {
         // We are not inside any loop, so a break or continue is illegal in this context
         if (type->value == "break") {
@@ -497,9 +437,6 @@ Statement::Statement(TypeNode *type) {
             output::errorUnexpectedContinue(yylineno);
             exit(0);
         } else {
-            if (DEBUG) {
-                printMessage("not break or continue");
-            }
         }
     } else if (type->value == "continue" && inSwitch) {
         output::errorUnexpectedContinue(yylineno);
@@ -509,12 +446,6 @@ Statement::Statement(TypeNode *type) {
 }
 
 Statement::Statement(string type, Exp *exp) {
-    if (DEBUG) {
-        printMessage("exp type ex");
-        printMessage(type);
-        printMessage(exp->type);
-        printMessage(exp->value);
-    }
     if (exp->type != "BOOL") {
         output::errorMismatch(yylineno);
         exit(0);
@@ -524,7 +455,6 @@ Statement::Statement(string type, Exp *exp) {
 
 // For Return SC -> this is for a function with a void return type
 Statement::Statement(const string &funcReturnType) {
-    if (DEBUG) printMessage("statement func ret type");
     // Need to check if the current running function is of void type
     for (int i = symTabStack.size() - 1; i >= 0; i--) {
         // Need to search in the current symtab with no particular order for the current function
@@ -543,14 +473,6 @@ Statement::Statement(const string &funcReturnType) {
 }
 
 Statement::Statement(Exp *exp) {
-    if (DEBUG) {
-        printMessage("statement exp!!!!!!");
-        printMessage(exp->type);
-        printMessage(exp->value);
-        printMessage("current func:");
-        printMessage(currentRunningFunctionScopeId);
-        //printSymTableStack();
-    }
     // Need to check if the current running function is of the specified type
     if (exp->type == "VOID") {
         // Attempt to return a void expression from a value returning function
@@ -581,7 +503,7 @@ Statement::Statement(Call *call) {
     dataTag = "function call";
 }
 
-Statement::Statement(TypeNode *id, Exp *exp) {
+Statement::Statement(Variable *id, Exp *exp) {
     if (!isDeclared(id->value)) {
         output::errorUndef(yylineno, id->value);
         exit(0);
@@ -601,8 +523,7 @@ Statement::Statement(TypeNode *id, Exp *exp) {
     }
 }
 
-Statement::Statement(Type *t, TypeNode *id, Exp *exp) {
-    if (DEBUG) printMessage("statement t id exp");
+Statement::Statement(Type *t, Variable *id, Exp *exp) {
     if (isDeclared(id->value)) {
         // Trying to redeclare a name that is already used for a different variable/fucntion
         output::errorDef(yylineno, id->value);
@@ -621,7 +542,7 @@ Statement::Statement(Type *t, TypeNode *id, Exp *exp) {
     }
 }
 
-Statement::Statement(Type *t, TypeNode *id) {
+Statement::Statement(Type *t, Variable *id) {
     if (isDeclared(id->value)) {
         // Trying to redeclare a name that is already used for a different variable/fucntion
         output::errorDef(yylineno, id->value);
@@ -633,40 +554,22 @@ Statement::Statement(Type *t, TypeNode *id) {
     shared_ptr<SymbolTableRow> nVar = std::make_shared<SymbolTableRow>(id->value, varType, offset, false);
     symTabStack.back()->rows.push_back(nVar);
     dataTag = t->value;
-    if (DEBUG) printSymTableStack();
 }
 
 Statement::Statement(Statements *states) {
-    if (DEBUG) {
-        printMessage("In statement from statements");
-        printMessage(states->value);
-    }
     dataTag = "statement block";
 }
 
 Statement::Statement(Exp *exp, CaseList *cList) {
     // Need to check that exp is a number (int,byte) and that all case decl in caselist are int or byte
-    if (DEBUG) {
-        if (!exp) {
-            printMessage("RECEIVED A NULLPTR");
-        }
-        printMessage("statement exp caselist");
-        printMessage(exp->value);
-        printMessage(exp->type);
-    }
     enterSwitch();
     if (exp->type != "INT" && exp->type != "BYTE") {
-        if (DEBUG) printMessage("Mismatch in exp type");
         output::errorMismatch(yylineno);
         exit(0);
     }
 
     for (auto &i : cList->cases) {
         if (i->value != "INT" && i->value != "BYTE") {
-            if (DEBUG) {
-                printMessage("Mismatch in case type");
-                printMessage(i->value);
-            }
             output::errorMismatch(yylineno);
             exit(0);
         }
@@ -684,14 +587,6 @@ Statements::Statements(Statements *states, Statement *state) {
 }
 
 CaseDecl::CaseDecl(Exp *num, Statements *states) {
-    if (DEBUG) {
-        printMessage("value of statements is:");
-        printMessage(states->value);
-        printMessage("value of exp:");
-        printMessage(num->value);
-        printMessage("type of exp:");
-        printMessage(num->type);
-    }
     if (num->type != "INT" && num->type != "BYTE") {
         //if (num->value != "INT" && num->value != "BYTE") {
         output::errorMismatch(yylineno);
@@ -724,7 +619,6 @@ void insertFunctionParameters(Formals *formals) {
 }
 
 Funcs::Funcs() {
-    if (DEBUG) printMessage("I am in funcs");
     if (strcmp(yytext, "") != 0) {
         output::errorSyn(yylineno);
         exit(0);
