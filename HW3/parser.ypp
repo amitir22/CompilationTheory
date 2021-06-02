@@ -1,549 +1,119 @@
 %{
-	#include <iostream>
-    #include <sstream>
-	#include <stdlib.h>
-	#include "Symbol_Table.h"
-	#define YYSTYPE struct parser
-
-	using namespace std;
-
-	extern int yylex();
-	extern int yyparse();
-	extern int yylineno;
-	int yyerror(const char * message);
-	SymbolTableStack* tableStack;
+/* Declarations section */
+    #include <iostream>
+    #include <stdlib.h>
+    #include "Semantics.h"
+    #include "hw3_output.hpp"
+    using namespace std;
+    extern int yylex();
+    extern int yylineno;
+    int yyerror(const char * message);
 %}
 
-/* todo: maybe add a %token SWITCH,CASE,DEFAULT */
-%right ASSIGN
-%left OR
-%left AND
-%left EQOP
-%nonassoc RELOP
-%left ADDOP
-%left MULOP
-%token VOID
-%token INT
-%token BOOL
-%right NOT
-%token TRUE
-%token FALSE
-%token RETURN
-%token IF
-%token WHILE
-%token BREAK
-%token CONTINUE
-%token SC
-%right COMMA
-%token LPAREN
-%right RPAREN
-%token LBRACE
-%right RBRACE
-%token ID
-%token NUM
+/* Rules section */
+
+%nonassoc VOID;
+%nonassoc INT;
+%nonassoc BYTE;
+%nonassoc B;
+%nonassoc BOOL;
+%nonassoc TRUE;
+%nonassoc FALSE;
+%nonassoc RETURN;
+%nonassoc IF;
+%nonassoc ELSE;
+%nonassoc WHILE;
+%nonassoc BREAK;
+%nonassoc CONTINUE;
+%nonassoc SC;
+%nonassoc COMMA;
+%nonassoc ID;
+%nonassoc NUM;
+%nonassoc STRING;
+%right ASSIGN;
+%left OR;
+%left AND;
+%left EQ_NEQ_RELOP;
+%nonassoc REL_RELOP;
+%left ADD_SUB_BINOP;
+%left MUL_DIV_BINOP;
+%right NOT;
+%nonassoc SWITCH;
+%nonassoc CASE;
+%nonassoc DEFAULT;
+%nonassoc COLON;
+%left RBRACE;
+%left LBRACE;
+%left RPAREN;
+%left LPAREN;
+
+%nonassoc SECOND_PRIOR;
+%nonassoc FIRST_PRIOR;
+%%
+
+Program : {$$ = new Program();} Funcs {exitProgramRuntime();};
+Funcs : %prec SECOND_PRIOR{$$ = new Funcs();} |
+        FuncDecl Funcs %prec FIRST_PRIOR{$$ = new Funcs();};
+
+FuncDecl: RetType ID LPAREN Formals RPAREN {$$ = new FuncDecl(dynamic_cast<RetType*>($1),$2,dynamic_cast<Formals*>($4));} LBRACE OS {insertFunctionParameters(dynamic_cast<Formals*>($4));} Statements CS {exitProgramFuncs();} RBRACE;
+RetType: Type{$$ = new RetType(dynamic_cast<Type*>($1));} | VOID{$$ = new RetType($1);};
+Formals : {$$ = new Formals();} | FormalsList{$$ = new Formals(dynamic_cast<FormalsList*>($1));};
+FormalsList : FormalDecl{$$ = new FormalsList(dynamic_cast<FormalDecl*>($1));} |
+FormalDecl COMMA FormalsList{$$ = new FormalsList(dynamic_cast<FormalDecl*>($1), dynamic_cast<FormalsList*>($3));};
+FormalDecl : Type ID{$$ = new FormalDecl(dynamic_cast<Type*>($1), $2);};
+Statements : Statement{$$ = new Statements(dynamic_cast<Statement*>($1));} |
+             Statements Statement{$$ = new Statements(dynamic_cast<Statements*>($1), dynamic_cast<Statement*>($2));};
+Statement : LBRACE OS Statements CS RBRACE {$$ = new Statement(dynamic_cast<Statements*>($3));} |
+            Type ID SC{$$ = new Statement(dynamic_cast<Type*>($1),$2);} |
+            Type ID ASSIGN Exp SC{$$ = new Statement(dynamic_cast<Type*>($1),$2, dynamic_cast<Exp*>($4));} |
+            ID ASSIGN Exp SC{$$ = new Statement($1, dynamic_cast<Exp*>($3));} |
+            Call SC{$$ = new Statement(dynamic_cast<Call*>($1));} |
+            RETURN SC{$$ = new Statement("VOID");} |
+            RETURN Exp SC{$$ = new Statement(dynamic_cast<Exp*>($2));} |
+            IF LPAREN Exp RPAREN OS Statement %prec IF {$$ = new Statement("if", dynamic_cast<Exp*>($3));closeCurrentScope();} |
+            IF LPAREN Exp RPAREN OS Statement ELSE {$$ = new Statement("if else", dynamic_cast<Exp*>($3));closeCurrentScope();} OS Statement CS |
+            WHILE LPAREN Exp RPAREN {$$ = new Statement("while", dynamic_cast<Exp*>($3));enterLoop();} OS Statement CS{exitLoop();} |
+            BREAK SC{$$ = new Statement($1);} |
+            CONTINUE SC{$$ = new Statement($1);} |
+            SWITCH {enterSwitch();} LPAREN Exp {new Exp(dynamic_cast<Exp*>($4), "switch");} RPAREN LBRACE OS CaseList {$$ = new Statement(dynamic_cast<Exp*>($4),dynamic_cast<CaseList*>($9));} CS {exitSwitch();} RBRACE;
+Call : ID LPAREN ExpList RPAREN{$$ = new Call($1, dynamic_cast<ExpList*>($3));} |
+       ID LPAREN RPAREN{$$ = new Call($1);};
+ExpList : Exp{$$ = new ExpList(dynamic_cast<Exp*>($1));} |
+          Exp COMMA ExpList{$$ = new ExpList(dynamic_cast<Exp*>($1), dynamic_cast<ExpList*>($3));};
+Type : INT{$$ = new Type($1);} |
+       BYTE{$$ = new Type($1);} |
+       BOOL{$$ = new Type($1);};
+Exp : LPAREN Exp RPAREN{$$ = new Exp(dynamic_cast<Exp*>($2));} |
+      Exp ADD_SUB_BINOP Exp{$$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "ADD_SUB_BINOP");} |
+      Exp MUL_DIV_BINOP Exp{$$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "MUL_DIV_BINOP");} |
+      ID{$$ = new Exp($1);} |
+      Call{$$ = new Exp(dynamic_cast<Call*>($1));} |
+      NUM{$$ = new Exp($1, "NUM");} |
+      NUM B{$$ = new Exp($1, "BYTE");} |
+      STRING{$$ = new Exp($1, "STRING");} |
+      TRUE{$$ = new Exp($1, "BOOL");} |
+      FALSE{$$ = new Exp($1, "BOOL");} |
+      NOT Exp{$$ = new Exp($1, dynamic_cast<Exp*>($2));} |
+      Exp AND Exp{$$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "AND");} |
+      Exp OR Exp{$$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "OR");} |
+      Exp EQ_NEQ_RELOP Exp{$$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "EQ_NEQ_RELOP");} |
+      Exp REL_RELOP Exp{$$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "REL_RELOP");};
+CaseList : CaseDecl CaseList{$$ = new CaseList(dynamic_cast<CaseDecl*>($1),dynamic_cast<CaseList*>($2));} |
+           CaseDecl{$$ = new CaseList(dynamic_cast<CaseDecl*>($1));} |
+           DEFAULT COLON Statements{$$ = new CaseList(dynamic_cast<Statements*>($3));};
+CaseDecl : CASE NUM COLON Statements{$$ = new CaseDecl(new Exp($2, "NUM"), dynamic_cast<Statements*>($4));};
+OS : {openNewScope();}
+CS : {closeCurrentScope();}
 
 %%
 
-Program	:	{ 
-                tableStack = new SymbolTableStack();
-                tableStack->SymbolTableStack::addScope(new SymbolTable(0));
-                vector<struct param>* printiArg = new vector<struct param>();
-                struct param intArg;
-                intArg.name = "intArg", intArg.type = "INT";
-                printiArg->push_back(intArg);
-                tableStack->scopes.back()->addFunctionToTable("printi", "VOID", printiArg);
-            }
-            Funcs CheckMain CloseScope
-		
-CheckMain:  {
-                struct symbol element = tableStack->SymbolTableStack::getElement("main");
-                if (element.type != "VOID" || !element.isFunction || element.listParams)
-                {
-                    output::errorMainMissing();
-                }
-            }
+/* Code section */
 
-Funcs:  	FuncDecl Funcs {}
-
-Funcs:		/* epsilon */ {}
-
-FuncStart:  RetType ID 
-            {
-                struct symbol element = tableStack->SymbolTableStack::getElement($2.var_name);
-                if (element.type != "NONE")
-                {
-                    output::errorDef(yylineno, $2.var_name);
-                }
-                $$.var_name = $2.var_name;
-                $$.type = $1.type;
-            }
-
-FuncDecl:	FuncStart LPAREN Formals RPAREN LBRACE 
-            {
-                tableStack->scopes.back()->addFunctionToTable($1.var_name, $1.type, $3.listParams);
-                tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
-                tableStack->scopes.back()->scopeType = "FUNC";
-                int i = 0;
-                struct symbol funcArg;
-                if ($3.listParams != nullptr)
-                {
-                    for (auto it = $3.listParams->cbegin(); it != $3.listParams->cend();it++)
-                    {
-                        funcArg = tableStack->SymbolTableStack::getElement((*it).name);
-                        if (funcArg.type != "NONE")
-                        {
-                            output::errorDef(yylineno, (*it).name);
-                        }
-                        tableStack->scopes.back()->SymbolTable::addVariableToTable((*it).name, (*it).type, --i);
-                    }
-                }
-            } 
-            Statements RBRACE CloseScope
-
-OpenScope:  {
-                tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
-            }
-
-CloseScope: {
-                output::endScope();
-                tableStack->SymbolTableStack::exitScope();
-            }
-
-RetType	:	Type {
-                $$.type = $1.type;
-            }
-
-RetType	:	VOID {
-                $$.type = "VOID";
-            }
-
-Formals	:	/* epsilon */ {}
-
-Formals	:	FormalsList 
-            {
-		        $$.listParams = $1.listParams;
-		        if($$.listParams->size() > 1) $$.listParams->pop_back();
-	    	}
-
-FormalsList:	FormalDecl 
-                {
-                    if($$.listParams->empty())
-                    {
-                        $$.listParams = $1.listParams;
-                    } 
-                    else if ($1.listParams->cbegin() != $1.listParams->cend()) 
-                    {
-                        $$.listParams->insert($$.listParams->cend(), $1.listParams->cbegin(), $1.listParams->cend());
-                    }
-                }
-
-FormalsList:	FormalDecl COMMA FormalsList 
-                {
-                    if($$.listParams->empty())
-                    {
-                        $$.listParams = $1.listParams;
-                    }
-                    else if ($3.listParams->cbegin() != $3.listParams->cend()) 
-                    {
-                        $$.listParams->insert($$.listParams->cend(), $3.listParams->cbegin(), $3.listParams->cend());
-                    }
-			    }
-
-FormalDecl:	Type ID 
-            {
-                struct symbol element = tableStack->SymbolTableStack::getElement($2.var_name);
-                if (element.type != "NONE")
-                {
-                    output::errorDef(yylineno, $2.var_name);
-                }
-                struct param a;
-                a.name = $2.var_name;
-                a.type = $1.type;
-                if (!$$.listParams)
-                {
-                    $$.listParams = new std::vector<struct param>();
-                }
-                $$.listParams->push_back(a);
-            }
-
-Statements:	Statements Statement {}
-
-Statements:	Statement {}
-
-Statement:	LBRACE 
-            { 
-                tableStack->SymbolTableStack::addScope(new SymbolTable(tableStack->scopes.back()->tableOffset));
-            }
-            Statements RBRACE 
-            {
-                output::endScope();
-                tableStack->SymbolTableStack::exitScope();
-            }
-
-Statement:	Type ID SC 
-            {
-                struct symbol element = tableStack->SymbolTableStack::getElement($2.var_name);
-                if (element.type != "NONE")
-                {
-                    output::errorDef(yylineno, $2.var_name);
-                }
-			    tableStack->scopes.back()->SymbolTable::addVariableToTable($2.var_name, $1.type, tableStack->scopes.back()->tableOffset);
-			}
-
-Statement:	Type ID ASSIGN Exp SC 
-            {
-                struct symbol element = tableStack->SymbolTableStack::getElement($2.var_name);
-                if (element.type != "NONE")
-                {
-                    output::errorDef(yylineno, $2.var_name);
-                }
-                if ($4.type != $1.type )
-                {
-                    output::errorMismatch(yylineno);
-                }
-                tableStack->scopes.back()->SymbolTable::addVariableToTable($2.var_name, $1.type, tableStack->scopes.back()->tableOffset);
-            }
-
-Statement:	ID ASSIGN Exp SC
-            {
-                struct symbol element = tableStack->SymbolTableStack::getElement($1.var_name);
-                if (element.type == "NONE" || element.isFunction)
-                {
-                    output::errorUndef(yylineno, $1.var_name);
-                }
-                if (element.type != $3.type )
-                {
-                    output::errorMismatch(yylineno);
-                }
-            }
-
-Statement:	Call SC 
-            {
-                $$.type = $1.type; $$.listParams = $1.listParams;
-            }
-
-Statement:	RETURN SC
-            {
-			    string retType = tableStack->SymbolTableStack::getLastDefinedFunction();
-                if (retType != "VOID")
-                {
-                    output::errorMismatch(yylineno);
-                }
-			    $$.type = "VOID";
-			}
-
-Statement:	RETURN Exp SC
-            {
-			    string retType = tableStack->SymbolTableStack::getLastDefinedFunction();
-                if ((retType != $2.type ) || $2.type == "VOID")
-                {
-                    output::errorMismatch(yylineno);
-                }
-			    $$.type = $2.type;
-			}
-
-Statement:	IF LPAREN Exp 
-            {
-                if ($3.type != "BOOL")
-                {
-                    output::errorMismatch(yylineno);
-                }
-            }
-			RPAREN OpenScope 
-            { 
-                tableStack->scopes.back()->scopeType = "IF"; 
-            } 
-            Statement CloseScope
-
-Statement:	WHILE LPAREN Exp {
-                if ($3.type != "BOOL")
-                {
-                    output::errorMismatch(yylineno);
-                }
-            }
-			RPAREN OpenScope
-            {
-                tableStack->scopes.back()->scopeType = "WHILE";
-            }
-            Statement CloseScope
-
-Statement:	BREAK SC
-            {
-                /* todo: dvir */
-			    if (!tableStack->isInsideWhile() && !tableStack->isInsideSwitch())
-                {
-                    output::errorUnexpectedBreak(yylineno);
-			    }
-			}
-            
-Statement:	CONTINUE SC
-            {
-                if (!tableStack->isInsideWhile())
-                {
-                    output::errorUnexpectedContinue(yylineno);
-                }
-			}
-
-/* todo: dvir */
-Statement:  SWITCH LPAREN Exp RPAREN LBRACE OpenScope
-            {
-                tableStack->scopes.back()->scopeType = "SWITCH"
-            }
-            CaseList RBRACE CloseScope
-
-Call:   	ID LPAREN ExpList RPAREN
-            {
-                if($3.listParams->size() > 1) $3.listParams->pop_back();
-                struct symbol func = tableStack->SymbolTableStack::getElement($1.var_name);
-                if (func.type == "NONE" || !func.isFunction)
-                {
-                    output::errorUndefFunc(yylineno, $1.var_name);
-                }
-                std::vector<struct param>* funcArgs = func.listParams;
-                std::vector<string> argTypes;
-                for (int i=0; i < funcArgs->size(); i++)
-                {
-                    argTypes.push_back(funcArgs->at(i).type);
-                }
-                if (!SymbolTable::listParamIsValid(func, $3.listParams))
-                {
-                    output::errorPrototypeMismatch(yylineno, $1.var_name, argTypes);
-                }
-                $$.var_name = func.name;
-                $$.type = func.type;
-                $$.listParams = func.listParams;
-                delete $3.listParams;
-            }
-
-Call:   	ID LPAREN RPAREN
-            {
-                struct symbol func = tableStack->SymbolTableStack::getElement($1.var_name);
-                if (func.type == "NONE" || !func.isFunction)
-                {
-                    output::errorUndefFunc(yylineno, $1.var_name);
-                }
-                vector<struct param>* funcArgs = func.listParams;
-                if (funcArgs && !funcArgs->empty())
-                {
-                    vector<string> argTypes;
-                    for (int i=0; i < funcArgs->size(); i++)
-                    {
-                        argTypes.push_back(funcArgs->at(i).type);
-                    }
-                    output::errorPrototypeMismatch(yylineno, $1.var_name, argTypes);
-                }
-				$$.var_name = func.name;
-                $$.type = func.type;
-                $$.listParams = func.listParams;
-		    }
-
-ExpList:	Exp COMMA ExpList
-            {
-                if($$.listParams->empty())
-                {
-                    $$.listParams = $1.listParams;
-                }
-                else if ($3.listParams->cbegin() != $3.listParams->cend())
-                {
-                    $$.listParams->insert($$.listParams->cend(), $3.listParams->cbegin(), $3.listParams->cend());
-                }
-            }
-
-ExpList:	Exp
-            {
-                if($$.listParams->empty())
-                {
-                    $$.listParams = $1.listParams;
-				}
-                else if ($1.listParams->cbegin() != $1.listParams->cend())
-                {
-                    $$.listParams->insert($$.listParams->cend(), $1.listParams->cbegin(), $1.listParams->cend());
-                }
-		    }
-
-Type:		INT
-            {
-                $$.type = "INT";
-            }
-
-            // todo: is there supposed to be a BYTE type too?
-
-Type:		BOOL
-            {
-                $$.type = "BOOL";
-            }
-
-Exp:    	LPAREN Exp RPAREN
-            {
-                $$ = $2;
-            }
-
-Exp:    	Exp ADDOP Exp
-            {
-                if ( $1.type != "INT"  || $3.type != "INT" )
-                {
-                    output::errorMismatch(yylineno);
-                }
-                $$.type = "INT";
-            }
-
-Exp:    	Exp MULOP Exp
-            {
-                if ( $1.type != "INT"  || $3.type != "INT" )
-                {
-                    output::errorMismatch(yylineno);
-                }
-                $$.type = "INT";
-            }
-
-Exp:    	ID
-            {
-                struct symbol element = tableStack->SymbolTableStack::getElement($1.var_name);
-                if (element.type == "NONE")
-                {
-                    output::errorUndef(yylineno, $1.var_name);
-                }
-                $$.var_name = $1.var_name;
-                $$.type = element.type;
-                struct param a;
-                a.name = element.name;
-                a.type = element.type;
-                if (!$$.listParams)
-                {
-                    $$.listParams = new vector<struct param>();
-                }
-                $$.listParams->push_back(a);
-		    }
-
-Exp:    	Call
-            {
-                struct param a;
-                a.name = $1.var_name;
-                a.type = $1.type;
-                $$.listParams = new vector<struct param>();
-                $$.listParams->push_back(a);
-            }
-
-Exp:    	NUM
-            {
-                $$.var_name = "#";
-                $$.type = "INT";
-                struct param a;
-                a.name = $1.var_name;
-                a.type = "INT";
-                if (!$$.listParams)
-                {
-                    $$.listParams = new vector<struct param>();
-                }
-                $$.listParams->push_back(a);
-		    }
-
-Exp:		TRUE
-            {
-		        $$.var_name = "#";
-                $$.type = "BOOL";
-                struct param a;
-                a.name = $1.var_name;
-                a.type = "BOOL";
-                if (!$$.listParams)
-                {
-                    $$.listParams = new vector<struct param>();
-                }
-                $$.listParams->push_back(a);
-            }
-
-Exp:		FALSE
-            {
-		        $$.var_name = "#";
-                $$.type = "BOOL";
-                struct param a;
-                a.name = $1.var_name;
-                a.type = "BOOL";
-                if (!$$.listParams)
-                {
-                    $$.listParams = new vector<struct param>();
-                }
-                $$.listParams->push_back(a);
-            }
-
-Exp:		NOT Exp
-            {
-                if ($2.type != "BOOL")
-                {
-                    output::errorMismatch(yylineno);
-                }
-                $$.type = "BOOL";
-                struct param a;
-                a.name = "NOT";
-                a.type = "BOOL";
-                if (!$$.listParams)
-                {
-                    $$.listParams = new vector<struct param>();
-                }
-                $$.listParams->push_back(a);
-            }
-
-Exp:		Exp AND Exp
-            {
-                if ($1.type != "BOOL" || $3.type != "BOOL")
-                {
-                    output::errorMismatch(yylineno);
-                }
-                $$.type = "BOOL";
-                $$.listParams = $1.listParams;
-            }
-
-Exp:		Exp OR Exp
-            {
-                if ($1.type != "BOOL" || $3.type != "BOOL")
-                {
-                    output::errorMismatch(yylineno);
-                }
-                $$.type = "BOOL";
-                $$.listParams = $1.listParams;
-            }
-
-Exp:	 	Exp EQOP Exp
-            {
-                if ( $1.type != "INT"  || $3.type != "INT" )
-                {
-                    output::errorMismatch(yylineno);
-                }
-                $$.type = "BOOL";
-                $$.listParams->back().type = "BOOL";
-            }
-
-Exp:		Exp RELOP Exp
-            {
-                if ( $1.type != "INT"  || $3.type != "INT" )
-                {
-                    output::errorMismatch(yylineno);
-                }
-                $$.type = "BOOL";
-                $$.listParams->back().type = "BOOL";
-            }
-
-/* todo: dvir */
-CaseList:   CaseDecl CaseList { /* todo: */ }
-
-CaseList:   CaseDecl { /* todo: */ }
-
-CaseList:   DEFAULT COLON Statements { /* todo: */ }
-
-CaseDecl:   CASE NUM COLON Statements
-            {
-                // todo: maybe need to match the type of NUM in switch with the types of \
-                         the cases
-            }
-
-%%
-
-int main()
-{
-	yyparse();
+int main() {
+    return yyparse();
 }
 
-int yyerror(const char * message)
-{
-	output::errorSyn(yylineno);
+int yyerror(const char * message) {
+    output::errorSyn(yylineno);
+    exit(0);
 }
