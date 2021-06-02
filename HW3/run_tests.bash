@@ -1,5 +1,6 @@
 #!/bin/bash
 
+echo "TESTS:"
 for num in {1..60}
 do
   ./hw3 < "more_tests/t$num.in" &> "more_tests/t$num.res"
