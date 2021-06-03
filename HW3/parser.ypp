@@ -29,6 +29,9 @@
         void exitProgramRuntimeState(); // same as here ^
 
         // helper functions:
+        shared_ptr<SymbolTableRecord> makeParamSymbolRecord(string value,
+                                                            vector<string> currentParamType,
+                                                            int currentOffset);
         void insertFunctionParametersToSymbolTable(Formals *formals);
         bool isDeclaredVariable(const string &name);
         bool isDeclared(const string &name);
@@ -879,6 +882,7 @@ void GlobalSemanticStateHandler::closeScope() {
             output::printID(record->name, record->offset, record->type[0]);
         } else {
             string funcReturnType = record->type.back();
+
             // Taking out the return type from the vector for easy printing
             record->type.pop_back();
             output::printID(record->name, record->offset,
@@ -911,19 +915,19 @@ void GlobalSemanticStateHandler::exitProgramFuncsState() {
     currentFunctionId = "";
 }
 
-// TODO: edit (add comments?)
 void GlobalSemanticStateHandler::exitProgramRuntimeState() {
-    shared_ptr<SymbolTable> globalScope = symbolTablesStack.front();
-    bool mainFunc = false;
+    shared_ptr<SymbolTable> globalScopeSymbolTable = symbolTablesStack.front();
+    bool doesMainFuncExist = false;
 
-    for (auto &record : globalScope->records) {
+    // looking if there's a main function in the symbol table of the global scope
+    for (auto &record : globalScopeSymbolTable->records) {
         if (record->isFunc && record->name == "main" && record->type.back() == "VOID" &&
             record->type.size() == 1) {
-            mainFunc = true;
+            doesMainFuncExist = true;
         }
     }
 
-    if (!mainFunc) {
+    if (!doesMainFuncExist) {
         output::errorMainMissing();
 
         exit(0);
@@ -932,12 +936,25 @@ void GlobalSemanticStateHandler::exitProgramRuntimeState() {
     closeScope();
 }
 
-// TODO: edit (add comments?, change variables names)
+shared_ptr<SymbolTableRecord> GlobalSemanticStateHandler::makeParamSymbolRecord(string value,
+                                                                                vector<string> currentParamType,
+                                                                                int currentOffset) {
+    return make_shared<SymbolTableRecord>(value, currentParamType, currentOffset, false);
+}
+
 void GlobalSemanticStateHandler::insertFunctionParametersToSymbolTable(Formals *formals) {
+    int currentOffset;
+    vector<string> currentParamType;
+    shared_ptr<SymbolTableRecord> currentParamRecord;
+
+    // iterating over all the function parameters and adding each one as a record in the symbol table
     for (unsigned int i = 0; i < formals->formals.size(); ++i) {
-        vector<string> nType = {formals->formals[i]->paramType};
-        shared_ptr<SymbolTableRecord> nParameter = make_shared<SymbolTableRecord>(formals->formals[i]->value, nType, -i - 1, false);
-        symbolTablesStack.back()->records.push_back(nParameter);
+        currentOffset =  -i - 1;
+        currentParamType = {formals->formals[i]->paramType};
+
+        currentParamRecord = makeParamSymbolRecord(formals->formals[i]->value, currentParamType, currentOffset);
+
+        symbolTablesStack.back()->records.push_back(currentParamRecord);
     }
 }
 
@@ -974,5 +991,6 @@ int main() {
 
 int yyerror(const char * message) {
     output::errorSyn(yylineno);
+
     exit(0);
 }
