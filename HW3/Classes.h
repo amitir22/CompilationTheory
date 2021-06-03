@@ -19,8 +19,8 @@ using namespace std;
 
 class SymbolTableRecord {
 public:
-    string name; // basically the identifier (variable/function name)
-    vector<string> type; // will have singular value if a variable and if a function the last type is the RetType
+    string name;
+    vector<string> type;
     int offset;
     bool isFunc;
 
@@ -37,7 +37,7 @@ public:
 
 class Variable {
 public:
-    string value; // TODO: edit ?
+    string value;
 
     Variable();
 
@@ -48,7 +48,7 @@ public:
     friend ostream &operator<<(ostream &os, const Variable &node);
 };
 
-// declarations used for cyclic class dependencies and for readability
+
 class Program;
 class Funcs;
 class FuncDecl;
@@ -88,10 +88,10 @@ private:
     shared_ptr<SymbolTableRecord> buildSymbolTableRecordFromFuncDecl();
 
 public:
-    // function parameters types
+
     vector<string> functionParamsTypes;
 
-    // FuncDecl -> RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE
+
     FuncDecl(RetType *retType, Variable *id, Formals *funcParams);
 };
 
@@ -104,10 +104,10 @@ class Formals : public Variable {
 public:
     vector<FormalDecl *> formals;
 
-    // Formals -> Epsilon
+
     Formals() = default;
 
-    // Formals -> FormalsList
+
     explicit Formals(FormalsList *formalList);
 };
 
@@ -115,10 +115,10 @@ class FormalsList : public Variable {
 public:
     vector<FormalDecl *> formals;
 
-    // FormalsList -> FormalDecl
+
     explicit FormalsList(FormalDecl *formalDecl);
 
-    // FormalsList -> FormalDecl COMMA FormalsList
+
     FormalsList(FormalDecl *formalDecl, FormalsList *formalsList);
 };
 
@@ -126,57 +126,57 @@ class FormalDecl : public Variable {
 public:
     string paramType;
 
-    // FormalDecl -> Type ID
+
     FormalDecl(Type *type, Variable *id) : Variable(id->value), paramType(type->value) { }
 };
 
 class Statements : public Variable {
 public:
-    // Statements -> Statement
+
     explicit Statements(Statement *statement) { }
 
-    // Statements -> Statements Statement
+
     Statements(Statements *statements, Statement *statement) { }
 };
 
 class Statement : public Variable {
-public:// Statement -> LBRACE Statements RBRACE
+public:
     explicit Statement(Statements *statements) { }
 
-    // Statement -> Type ID SC
+
     Statement(Type *type, Variable *id);
 
-    // Statement -> Type ID ASSIGN Exp SC
+
     Statement(Type *type, Variable *id, Exp *exp);
 
-    // Statement -> ID ASSIGN Exp SC
+
     Statement(Variable *id, Exp *exp);
 
-    // Statement -> Call SC
+
     explicit Statement(Call *call) { }
 
-    // Statement -> RETURN SC
+
     explicit Statement(const string& funcReturnType);
 
-    // Statement -> RETURN Exp SC
+
     explicit Statement(Exp *exp);
 
-    // Statement -> tl;dr: handles if, if-else, while
+
     Statement(string type, Exp *exp);
 
-    // Statement -> tl;dr: handles break, continue
+
     explicit Statement(Variable *variable);
 
-    // Statement -> SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE
+
     Statement(Exp *exp, CaseList *caseList);
 };
 
 class Call : public Variable {
 public:
-    // Call -> ID LPAREN ExpList RPAREN
+
     Call(Variable *id, ExpList *list);
 
-    // Call -> ID LPAREN RPAREN
+
     explicit Call(Variable *id);
 };
 
@@ -184,38 +184,38 @@ class ExpList : public Variable {
 public:
     vector<Exp> expressionsList;
 
-    // ExpList -> Exp
+
     explicit ExpList(Exp *exp);
 
-    // ExpList -> Exp COMMA ExpList
+
     ExpList(Exp *exp, ExpList *expList);
 };
 
 
 class Exp : public Variable {
 public:
-    string type; // used when bison creates the Exp object
-    bool realBooleanValue; // useful only if a boolean expression
+    string type;
+    bool realBooleanValue;
 
-    // Exp -> LPAREN Exp RPAREN
+
     Exp(Exp *exp);
 
-    // tl;dr: handles RELOP, MUL, DIV, ADD, SUB, OR, AND expressions
+
     Exp(Exp *exp1, Variable *op, Exp *exp2, const string &taggedType);
 
-    // Exp -> ID
+
     explicit Exp(Variable *variable);
 
-    // Exp -> Call
+
     explicit Exp(Call *call) : Variable(call->value), type(call->value) { }
 
-    // tl;dr: handles NUM, NUM B, STRING, TRUE and FALSE
+
     Exp(Variable *variable, string taggedType);
 
-    // Exp -> NOT Exp
+
     Exp(Variable *variable, Exp *exp);
 
-    // tl;dr: handles Exp in switch scope
+
     Exp(Exp *exp, string tag);
 };
 
@@ -225,19 +225,19 @@ public:
 
     CaseList() { value = "case list"; }
 
-    // CaseList -> CaseDecl CaseList
+
     CaseList(CaseDecl *caseDecl, CaseList *caseList);
 
-    // CaseList -> CaseDecl
+
     explicit CaseList(CaseDecl *caseDecl);
 
-    // CaseList -> DEFAULT COLON Statements
+
     explicit CaseList(Statements *statements) {}
 };
 
 class CaseDecl : public Variable {
 public:
-    // CaseDecl -> CASE NUM COLON Statements
+
     CaseDecl(Exp *expression, Statements *statements);
 };
 
