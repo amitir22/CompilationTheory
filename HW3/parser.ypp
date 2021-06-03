@@ -7,29 +7,14 @@
     extern int yylineno;
 
     int yyerror(const char * message);
-    // state handlers:
-    void openScope();
-    void closeScope();
-    void enterLoopState();
-    void exitLoopState();
-    void enterSwitchState();
-    void exitSwitchState();
-    void exitProgramFuncsState(); // entering this state is already handled and happens once
-    void exitProgramRuntimeState(); // same as here ^
 
-    // helper functions:
-    void insertFunctionParameters(Formals *formals);
-    bool isDeclaredVariable(const string &name);
-    bool isDeclared(const string &name);
-    // Note: same as with the Variable classes, this namespace's goal is to minimize
-    //       the logic needed in the parser.ypp and scanner.lex files.
     namespace GlobalSemanticStateHandler {
         // global variables declarations:
-        extern vector<shared_ptr<SymbolTable>> symbolTablesStack; // stack of SymbolTables for scope-management
-        extern vector<int> offsetStack; // stack used to keep track of the current offsets in nested scopes
-        extern int nestedLoopDepth; // counter variable used to keep track of the nested loops' depth.
-        extern bool isInSwitchState; // self explanatory indicator flag
-        extern string currentFunctionId; // value is always "" except if we are within a function scope
+        vector<shared_ptr<SymbolTable>> symbolTablesStack; // stack of SymbolTables for scope-management
+        stack<int> offsetStack; // stack used to keep track of the current offsets in nested scopes
+        int nestedLoopDepth = 0; // counter variable used to keep track of the nested loops' depth.
+        bool isInSwitchState = false; // self explanatory indicator flag
+        string currentFunctionId; // value is always "" except if we are within a function scope
 
         // global functions declarations:
 
@@ -44,7 +29,7 @@
         void exitProgramRuntimeState(); // same as here ^
 
         // helper functions:
-        void insertFunctionParameters(Formals *formals);
+        void insertFunctionParametersToSymbolTable(Formals *formals);
         bool isDeclaredVariable(const string &name);
         bool isDeclared(const string &name);
     }
@@ -115,7 +100,7 @@ FuncDecl:       RetType ID LPAREN Formals RPAREN
                     $$ = new FuncDecl(dynamic_cast<RetType*>($1),$2,dynamic_cast<Formals*>($4));
                 } LBRACE OpenScope
                 {
-                    GlobalSemanticStateHandler::insertFunctionParameters(dynamic_cast<Formals*>($4));
+                    GlobalSemanticStateHandler::insertFunctionParametersToSymbolTable(dynamic_cast<Formals*>($4));
                 } Statements CloseScope
                 {
                     GlobalSemanticStateHandler::exitProgramFuncsState();
@@ -405,178 +390,169 @@ Variable::Variable(string str) {
 
 ostream &operator<<(ostream &os, const Variable &node) {
     os << "value: " << node.value;
+
     return os;
 }
 
-
-// TODO: edit
-Program::Program() : Variable("Program") {
-    shared_ptr<SymbolTable> symTab = std::make_shared<SymbolTable>();
-    shared_ptr<SymbolTableRecord> printFunc =
-            std::make_shared<SymbolTableRecord>(SymbolTableRecord("print", {"STRING", "VOID"}, 0, true));
-    shared_ptr<SymbolTableRecord> printiFunc =
-            std::make_shared<SymbolTableRecord>(SymbolTableRecord("printi", {"INT", "VOID"}, 0, true));
-
-    // Placing the print and printi function at the bottom of the global symbol table
-    symTab->records.push_back(printFunc);
-    symTab->records.push_back(printiFunc);
-    // Placing the global symbol table at the bottom of the global symbol table stack
-    GlobalSemanticStateHandler::symbolTablesStack.push_back(symTab);
-    // Placing the global symbol table at the bottom of the offset stack
-    GlobalSemanticStateHandler::offsetStack.push_back(0);
+shared_ptr<SymbolTableRecord> Program::initPrintFunc() {
+    return std::make_shared<SymbolTableRecord>(SymbolTableRecord("print", {"STRING", "VOID"}, 0, true));
 }
 
-// TODO: edit
+shared_ptr<SymbolTableRecord> Program::initPrintIFunc() {
+    return std::make_shared<SymbolTableRecord>(SymbolTableRecord("printi", {"INT", "VOID"}, 0, true));
+}
+
+Program::Program() : Variable("Program") {
+    shared_ptr<SymbolTable> symbolTable = std::make_shared<SymbolTable>();
+
+    // initializing the print/printi function records in the (global) symbol table
+    shared_ptr<SymbolTableRecord> printFunc = initPrintFunc();
+    shared_ptr<SymbolTableRecord> printIFunc = initPrintIFunc();
+
+    // putting the print and printi functions declarations in the symbolTable
+    symbolTable->records.push_back(printFunc);
+    symbolTable->records.push_back(printIFunc);
+
+    // initializing the symbol-table scope stack with global scope symbol-table
+    GlobalSemanticStateHandler::symbolTablesStack.push_back(symbolTable);
+
+    // initializing the offset scope stack with the global scope offset
+    GlobalSemanticStateHandler::offsetStack.push(0);
+}
+
 Funcs::Funcs() {
     if (strcmp(yytext, "") != 0) {
+        // if the last lexeme is empty then it's a syntax error
         output::errorSyn(yylineno);
+
         exit(0);
     }
 }
 
-// TODO: edit
+shared_ptr<SymbolTableRecord> FuncDecl::buildSymbolTableRecordFromFuncDecl() {
+    return std::make_shared<SymbolTableRecord>(value, functionParamsTypes, 0, true);
+}
+
 FuncDecl::FuncDecl(RetType *retType, Variable *id, Formals *funcParams) {
     if (GlobalSemanticStateHandler::isDeclared(id->value)) {
-        // Trying to redeclare a name that is already used for a different variable/fucntion
+        // duplicate declaration
         output::errorDef(yylineno, id->value);
+
         exit(0);
     }
 
-    for (unsigned int i = 0; i < funcParams->formals.size(); ++i) {
-        if (GlobalSemanticStateHandler::isDeclared(funcParams->formals[i]->value) ||
-            funcParams->formals[i]->value == id->value) {
-            // Trying to shadow inside the function a variable that was already declared
-            // Or trying to name a function with the same name as one of the function parameters
+    for (auto iter = funcParams->formals.begin(); iter != funcParams->formals.end(); ++iter) {
+        if (GlobalSemanticStateHandler::isDeclared((*iter)->value) ||
+            (*iter)->value == id->value) {
+            // if the function name or the parameters names shadow declarations from outer scopes
             output::errorDef(yylineno, id->value);
+
             exit(0);
         }
 
-        for (unsigned int j = i + 1; j < funcParams->formals.size(); ++j) {
-            if (funcParams->formals[i]->value == funcParams->formals[j]->value) {
-                // Trying to declare a function where 2 parameters or more have the same name
-                output::errorDef(yylineno, funcParams->formals[i]->value);
+        // iterating the parameters' names to check if there are duplicate parameters names
+        for (auto iter2 = iter + 1; iter2 != funcParams->formals.end(); ++iter2) {
+            if ((*iter)->value == (*iter2)->value) {
+                output::errorDef(yylineno, (*iter)->value);
+
                 exit(0);
             }
         }
     }
 
-    // This is the name of the newly declared function
+    // setting the function name of the function described by the FuncDecl object
     value = id->value;
 
     if (funcParams->formals.size() != 0) {
-        // Saving the types of all the different function parameters
+        // building the the functionParamsTypes vector of the FuncDecl object
         for (auto &formal : funcParams->formals) {
             functionParamsTypes.push_back(formal->paramType);
         }
-    } else {
-        // The func has no input parameters, no need to add a specific parameter type
     }
 
-    // Saving the return type of the function
+    // the last type is the return type
     functionParamsTypes.push_back(retType->value);
 
-    // Adding the new function to the symTab
-    shared_ptr<SymbolTableRecord> nFunc = std::make_shared<SymbolTableRecord>(value, functionParamsTypes, 0, true);
-    GlobalSemanticStateHandler::symbolTablesStack.back()->records.push_back(nFunc);
+    // now adding said function to the symbolTable
+    shared_ptr<SymbolTableRecord> funcSymbolRecord = buildSymbolTableRecordFromFuncDecl();
+
+    GlobalSemanticStateHandler::symbolTablesStack.back()->records.push_back(funcSymbolRecord);
+
+    // updating current function scope
     GlobalSemanticStateHandler::currentFunctionId = value;
 }
 
-// TODO: edit
 Formals::Formals(FormalsList *formalList) {
     formals = vector<FormalDecl *>(formalList->formals);
 }
 
-// TODO: edit
 FormalsList::FormalsList(FormalDecl *formalDecl) {
     formals.insert(formals.begin(), formalDecl);
 }
 
-// TODO: edit
 FormalsList::FormalsList(FormalDecl *formalDecl, FormalsList *formalsList) {
     formals = vector<FormalDecl *>(formalsList->formals);
     formals.insert(formals.begin(), formalDecl);
 }
 
-// TODO: edit
-Statement::Statement(Statements *statements) {
-    dataTag = "statement block";
-}
-
-// TODO: edit
+// TODO: edit (comments)
 Statement::Statement(Type *type, Variable *id) {
     if (GlobalSemanticStateHandler::isDeclared(id->value)) {
         // Trying to redeclare a name that is already used for a different variable/fucntion
         output::errorDef(yylineno, id->value);
+
         exit(0);
     }
 
     // Creating a new variable on the stack will cause the next one to have a higher offset
-    int offset = GlobalSemanticStateHandler::offsetStack.back()++;
+    int offset = GlobalSemanticStateHandler::offsetStack.top()++;
     vector<string> varType = {type->value};
     shared_ptr<SymbolTableRecord> nVar = std::make_shared<SymbolTableRecord>(id->value, varType, offset, false);
     GlobalSemanticStateHandler::symbolTablesStack.back()->records.push_back(nVar);
-    dataTag = type->value;
 }
 
-// TODO: edit
+// TODO: edit (comments)
 Statement::Statement(Type *type, Variable *id, Exp *exp) {
     if (GlobalSemanticStateHandler::isDeclared(id->value)) {
         // Trying to redeclare a name that is already used for a different variable/fucntion
         output::errorDef(yylineno, id->value);
+
         exit(0);
     }
     if ((type->value == exp->type) || (type->value == "INT" && exp->type == "BYTE")) {
-        dataTag = type->value;
         // Creating a new variable on the stack will cause the next one to have a higher offset
-        int offset = GlobalSemanticStateHandler::offsetStack.back()++;
+        int offset = GlobalSemanticStateHandler::offsetStack.top()++;
         vector<string> varType = {type->value};
         shared_ptr<SymbolTableRecord> nVar = std::make_shared<SymbolTableRecord>(id->value, varType, offset, false);
         GlobalSemanticStateHandler::symbolTablesStack.back()->records.push_back(nVar);
     } else {
         output::errorMismatch(yylineno);
+
         exit(0);
     }
 }
 
-// TODO: edit
+// TODO: edit (add comment)
 Statement::Statement(Variable *id, Exp *exp) {
     if (!GlobalSemanticStateHandler::isDeclared(id->value)) {
         output::errorUndef(yylineno, id->value);
+
         exit(0);
     }
-
-    // Searching for the variable in the symtab
-    for (int i = GlobalSemanticStateHandler::symbolTablesStack.size() - 1; i >= 0; i--) {
-        // Need to search in the current symtab with no particular order for the current function
-        for (auto &row : GlobalSemanticStateHandler::symbolTablesStack[i]->records) {
-            if (!row->isFunc && row->name == id->value) {
-                // We found the desired variable
-                if ((row->type.back() == exp->type) || (row->type.back() == "INT" && exp->type == "BYTE")) {
-                    dataTag = row->type.back();
-                }
-            }
-        }
-    }
 }
 
-// TODO: edit
-Statement::Statement(Call *call) {
-    dataTag = "function call";
-}
-
-// TODO: edit
+// TODO: edit (comments)
 Statement::Statement(const string &funcReturnType) {
     // Need to check if the current running function is of void type
-    for (int i = GlobalSemanticStateHandler::symbolTablesStack.size() - 1; i >= 0; i--) {
+    for (auto &symbolTable : GlobalSemanticStateHandler::symbolTablesStack) {
         // Need to search in the current symtab with no particular order for the current function
-        for (auto &row : GlobalSemanticStateHandler::symbolTablesStack[i]->records) {
-            if (row->isFunc &&
-                row->name == GlobalSemanticStateHandler::currentFunctionId) {
+        for (auto &record : symbolTable->records) {
+            if (record->isFunc && record->name == GlobalSemanticStateHandler::currentFunctionId) {
                 // We found the current running function
-                if (row->type.back() == funcReturnType) {
-                    dataTag = "void return value";
+                if (record->type.back() == funcReturnType) {
                 } else {
                     output::errorMismatch(yylineno);
+
                     exit(0);
                 }
             }
@@ -584,28 +560,27 @@ Statement::Statement(const string &funcReturnType) {
     }
 }
 
-// TODO: edit
+// TODO: edit (comments)
 Statement::Statement(Exp *exp) {
     // Need to check if the current running function is of the specified type
     if (exp->type == "VOID") {
         // Attempt to return a void expression from a value returning function
         output::errorMismatch(yylineno);
+
         exit(0);
     }
 
-    for (int i = GlobalSemanticStateHandler::symbolTablesStack.size() - 1; i >= 0; i--) {
+    for (auto &symbolTable : GlobalSemanticStateHandler::symbolTablesStack) {
         // Need to search in the current symtab with no particular order for the current function
-        for (auto &row : GlobalSemanticStateHandler::symbolTablesStack[i]->records) {
-            if (row->isFunc &&
-                row->name == GlobalSemanticStateHandler::currentFunctionId) {
+        for (auto &record : symbolTable->records) {
+            if (record->isFunc && record->name == GlobalSemanticStateHandler::currentFunctionId) {
                 // We found the current running function
-                if (row->type.back() == exp->type) {
-                    dataTag = exp->value;
-                } else if (row->type.back() == "INT" && exp->type == "BYTE") {
-                    // Allowing automatic cast from byte to int
-                    dataTag = row->type.back();
+                if (record->type.back() == exp->type) {
+                } else if (record->type.back() == "INT" && exp->type == "BYTE") {
+                    // do nothing because automatic cast from byte to int is allowed
                 } else {
                     output::errorMismatch(yylineno);
+
                     exit(0);
                 }
             }
@@ -613,71 +588,76 @@ Statement::Statement(Exp *exp) {
     }
 }
 
-// TODO: edit
 Statement::Statement(string type, Exp *exp) {
     if (exp->type != "BOOL") {
         output::errorMismatch(yylineno);
+
         exit(0);
     }
-    dataTag = "if if else while";
 }
 
-// TODO: edit
+// TODO: edit (comments)
 Statement::Statement(Variable *variable) {
     if (GlobalSemanticStateHandler::nestedLoopDepth == 0 && !GlobalSemanticStateHandler::isInSwitchState) {
         // We are not inside any loop, so a break or continue is illegal in this context
         if (variable->value == "break") {
             output::errorUnexpectedBreak(yylineno);
+
             exit(0);
         } else if (variable->value == "continue") {
             output::errorUnexpectedContinue(yylineno);
+
             exit(0);
         } else {
         }
     } else if (variable->value == "continue" && GlobalSemanticStateHandler::isInSwitchState) {
         output::errorUnexpectedContinue(yylineno);
+
         exit(0);
     }
-    dataTag = "break or continue";
 }
 
-// TODO: edit
+// TODO: edit (comments)
 Statement::Statement(Exp *exp, CaseList *caseList) {
     // Need to check that exp is a number (int,byte) and that all case decl in caselist are int or byte
     GlobalSemanticStateHandler::enterSwitchState();
 
     if (exp->type != "INT" && exp->type != "BYTE") {
         output::errorMismatch(yylineno);
+
         exit(0);
     }
 
-    for (auto &i : caseList->caseDeclarations) {
-        if (i->value != "INT" && i->value != "BYTE") {
+    for (auto &caseDeclaration : caseList->caseDeclarations) {
+        if (caseDeclaration->value != "INT" && caseDeclaration->value != "BYTE") {
             output::errorMismatch(yylineno);
+
             exit(0);
         }
     }
 
-    dataTag = "switch block";
 }
 
-// TODO: edit
+// TODO: edit (comments)
 Call::Call(Variable *id) {
-    for (auto &symTab : GlobalSemanticStateHandler::symbolTablesStack) {
-        for (auto &row : symTab->records) {
-            if (row->name == id->value) {
-                if (!row->isFunc) {
+    for (auto &symbolTable : GlobalSemanticStateHandler::symbolTablesStack) {
+        for (auto &record : symbolTable->records) {
+            if (record->name == id->value) {
+                if (!record->isFunc) {
                     // We found a declaration of a variable with the same name, illegal
                     output::errorUndefFunc(yylineno, id->value);
+
                     exit(0);
-                } else if (row->isFunc && row->type.size() == 1) {
+                } else if (record->isFunc && record->type.size() == 1) {
                     // We found the right function, has the same name, it really is a function, and receives no parameters
                     // Saving the type of the function call return value
-                    value = row->type.back();
+                    value = record->type.back();
+
                     return;
                 } else {
-                    row->type.pop_back();
-                    output::errorPrototypeMismatch(yylineno, id->value, row->type);
+                    record->type.pop_back();
+                    output::errorPrototypeMismatch(yylineno, id->value, record->type);
+
                     exit(0);
                 }
             }
@@ -685,44 +665,49 @@ Call::Call(Variable *id) {
     }
     // We didn't find a declaration of the desired function
     output::errorUndefFunc(yylineno, id->value);
+
     exit(0);
 }
 
-// TODO: edit
+// TODO: edit (comments)
 Call::Call(Variable *id, ExpList *list) {
-    for (auto &symTab : GlobalSemanticStateHandler::symbolTablesStack) {
-        for (auto &row : symTab->records) {
-            if (row->name == id->value) {
-                if (!row->isFunc) {
+    for (auto &symbolTable : GlobalSemanticStateHandler::symbolTablesStack) {
+        for (auto &record : symbolTable->records) {
+            if (record->name == id->value) {
+                if (!record->isFunc) {
                     // We found a declaration of a variable with the same name, illegal
                     output::errorUndefFunc(yylineno, id->value);
+
                     exit(0);
-                } else if (row->isFunc && row->type.size() == list->expressionsList.size() + 1) {
+                } else if (record->isFunc && record->type.size() == list->expressionsList.size() + 1) {
                     // We found the right function, has the same name, it really is a function
                     // Now we need to check that the parameter types are correct between what the function accepts, and what was sent
                     for (unsigned int i = 0; i < list->expressionsList.size(); ++i) {
-                        if (list->expressionsList[i].type == row->type[i]) {
+                        if (list->expressionsList[i].type == record->type[i]) {
                             // This parameter is of matching type so it is ok
                             continue;
-                        } else if (list->expressionsList[i].type == "BYTE" && row->type[i] == "INT") {
+                        } else if (list->expressionsList[i].type == "BYTE" && record->type[i] == "INT") {
                             // The function receives int as a paramter, in this instance a byte was sent, but it is ok to cast from BYTE to INT
                             continue;
                         }
 
                         // Removing the return type of the function so we have an easy list of requested parameters to print
-                        row->type.pop_back();
-                        output::errorPrototypeMismatch(yylineno, id->value, row->type);
+                        record->type.pop_back();
+                        output::errorPrototypeMismatch(yylineno, id->value, record->type);
+
                         exit(0);
                     }
 
                     // Saving the type of the function call return value
-                    value = row->type.back();
+                    value = record->type.back();
+
                     return;
                 } else {
                     // The number of parameters we received does not match the number the function takes as arguments
                     // Removing the return type of the function so we have an easy list of requested parameters to print
-                    row->type.pop_back();
-                    output::errorPrototypeMismatch(yylineno, id->value, row->type);
+                    record->type.pop_back();
+                    output::errorPrototypeMismatch(yylineno, id->value, record->type);
+
                     exit(0);
                 }
             }
@@ -731,6 +716,7 @@ Call::Call(Variable *id, ExpList *list) {
 
     // We didn't find a declaration of the desired function
     output::errorUndefFunc(yylineno, id->value);
+
     exit(0);
 }
 
@@ -778,10 +764,12 @@ Exp::Exp(Exp *exp1, Variable *op, Exp *exp2, const string &taggedType) {
         } else {
             // only a boolean operation is allowed between 2 boolean expressions
             output::errorMismatch(yylineno);
+
             exit(0);
         }
     } else {
         output::errorMismatch(yylineno);
+
         exit(0);
     }
 }
@@ -790,27 +778,26 @@ Exp::Exp(Variable *variable) {
     // making sure the variable is declared
     if (!GlobalSemanticStateHandler::isDeclaredVariable(variable->value)) {
         output::errorUndef(yylineno, variable->value);
+
         exit(0);
     }
 
-    // TODO: edit:
+    // TODO: edit (comments)
     // Need to save the type of the variable function as the type of the expression
-    for (int i = GlobalSemanticStateHandler::symbolTablesStack.size() - 1; i >= 0; --i) {
-        for (auto &row : GlobalSemanticStateHandler::symbolTablesStack[i]->records) {
-            if (row->name == variable->value) {
-                // We found the variable/func we wanted to use in the expression
-                value = variable->value;
-                // Getting the type of the variable, or the return type of the function
-                type = row->type.back();
-                return;
-            }
-        }
-    }
-}
+    for (auto symbolTableIter = GlobalSemanticStateHandler::symbolTablesStack.rbegin();
+         symbolTableIter != GlobalSemanticStateHandler::symbolTablesStack.rend();
+         ++symbolTableIter) {
+            for (auto &record : (*symbolTableIter)->records) {
+                if (record->name == variable->value) {
+                    // We found the variable/func we wanted to use in the expression
+                    value = variable->value;
+                    // Getting the type of the variable, or the return type of the function
+                    type = record->type.back();
 
-Exp::Exp(Call *call) {
-    value = call->value;
-    type = call->value;
+                    return;
+                }
+            }
+    }
 }
 
 Exp::Exp(Variable *variable, string taggedType) : Variable::Variable(variable->value) {
@@ -822,6 +809,7 @@ Exp::Exp(Variable *variable, string taggedType) : Variable::Variable(variable->v
         // check that size is legal for type BYTE
         if (stoi(variable->value) > 255) {
             output::errorByteTooLarge(yylineno, variable->value);
+
             exit(0);
         }
     } else if (type == "BOOL") {
@@ -837,6 +825,7 @@ Exp::Exp(Variable *variable, Exp *exp) {
     if (exp->type != "BOOL") {
         // not a boolean expression, can't apply NOT
         output::errorMismatch(yylineno);
+
         exit(0);
     }
 
@@ -847,6 +836,7 @@ Exp::Exp(Variable *variable, Exp *exp) {
 Exp::Exp(Exp *exp, string tag) {
     if (tag == "switch" && exp->type != "INT" && exp->type != "BYTE") {
         output::errorMismatch(yylineno);
+
         exit(0);
     }
 }
@@ -863,6 +853,7 @@ CaseList::CaseList(CaseDecl *caseDecl) : CaseList::CaseList() {
 CaseDecl::CaseDecl(Exp *expression, Statements *statements) {
     if (expression->type != "INT" && expression->type != "BYTE") {
         output::errorMismatch(yylineno);
+
         exit(0);
     }
 
@@ -871,41 +862,33 @@ CaseDecl::CaseDecl(Exp *expression, Statements *statements) {
 
 // GlobalSemanticStateHandler namespace
 
-// global variables definitions:
-vector<shared_ptr<SymbolTable>> GlobalSemanticStateHandler::symbolTablesStack;
-vector<int> GlobalSemanticStateHandler::offsetStack;
-int GlobalSemanticStateHandler::nestedLoopDepth = 0;
-bool GlobalSemanticStateHandler::isInSwitchState = false;
-string GlobalSemanticStateHandler::currentFunctionId;
-
-// global functions definitions:
-
 void GlobalSemanticStateHandler::openScope() {
     symbolTablesStack.push_back(make_shared<SymbolTable>());
-    offsetStack.push_back(offsetStack.back());
+    offsetStack.push(offsetStack.top());
 }
 
-// TODO: edit
+// TODO: edit (comments)
 void GlobalSemanticStateHandler::closeScope() {
+    shared_ptr<SymbolTable> currentSymbolTable = symbolTablesStack.back();
+
     output::endScope();
-    shared_ptr<SymbolTable> currentScope = symbolTablesStack.back();
-    for (auto &row : currentScope->records) {
-        if (!row->isFunc) {
+
+    for (auto &record : currentSymbolTable->records) {
+        if (!record->isFunc) {
             // Print a normal variable
-            output::printID(row->name, row->offset, row->type[0]);
+            output::printID(record->name, record->offset, record->type[0]);
         } else {
-            string funcReturnType = row->type.back();
+            string funcReturnType = record->type.back();
             // Taking out the return type from the vector for easy printing
-            row->type.pop_back();
-            output::printID(row->name, row->offset,
-                            output::makeFunctionType(funcReturnType, row->type));
+            record->type.pop_back();
+            output::printID(record->name, record->offset,
+                            output::makeFunctionType(funcReturnType, record->type));
         }
     }
 
-    currentScope->records.clear();
+    currentSymbolTable->records.clear();
     symbolTablesStack.pop_back();
-    offsetStack.pop_back();
-
+    offsetStack.pop();
 }
 
 void GlobalSemanticStateHandler::enterLoopState() {
@@ -928,24 +911,29 @@ void GlobalSemanticStateHandler::exitProgramFuncsState() {
     currentFunctionId = "";
 }
 
-// TODO: edit
+// TODO: edit (add comments?)
 void GlobalSemanticStateHandler::exitProgramRuntimeState() {
     shared_ptr<SymbolTable> globalScope = symbolTablesStack.front();
     bool mainFunc = false;
-    for (auto &row : globalScope->records) {
-        if (row->isFunc && row->name == "main" && row->type.back() == "VOID" && row->type.size() == 1) {
+
+    for (auto &record : globalScope->records) {
+        if (record->isFunc && record->name == "main" && record->type.back() == "VOID" &&
+            record->type.size() == 1) {
             mainFunc = true;
         }
     }
+
     if (!mainFunc) {
         output::errorMainMissing();
+
         exit(0);
     }
+
     closeScope();
 }
 
-// TODO: edit
-void GlobalSemanticStateHandler::insertFunctionParameters(Formals *formals) {
+// TODO: edit (add comments?, change variables names)
+void GlobalSemanticStateHandler::insertFunctionParametersToSymbolTable(Formals *formals) {
     for (unsigned int i = 0; i < formals->formals.size(); ++i) {
         vector<string> nType = {formals->formals[i]->paramType};
         shared_ptr<SymbolTableRecord> nParameter = make_shared<SymbolTableRecord>(formals->formals[i]->value, nType, -i - 1, false);
@@ -953,11 +941,11 @@ void GlobalSemanticStateHandler::insertFunctionParameters(Formals *formals) {
     }
 }
 
-// TODO: edit
 bool GlobalSemanticStateHandler::isDeclaredVariable(const string &name) {
-    for (int i = symbolTablesStack.size() - 1; i >= 0; --i) {
-        for (auto &row : symbolTablesStack[i]->records) {
-            if (row->name == name && !row->isFunc) {
+    // traversing the symbol tables of all the scopes to check if the given variable name exists
+    for (auto &symbolTable : GlobalSemanticStateHandler::symbolTablesStack) {
+        for (auto &record : symbolTable->records) {
+            if (record->name == name && !record->isFunc) {
                 return true;
             }
         }
@@ -966,11 +954,11 @@ bool GlobalSemanticStateHandler::isDeclaredVariable(const string &name) {
     return false;
 }
 
-// TODO: edit
 bool GlobalSemanticStateHandler::isDeclared(const string &name) {
-    for (int i = symbolTablesStack.size() - 1; i >= 0; --i) {
-        for (auto &row : symbolTablesStack[i]->records) {
-            if (row->name == name) {
+    // traversing the symbol tables of all the scopes to check if the given var/func name exists
+    for (auto &symbolTable : GlobalSemanticStateHandler::symbolTablesStack) {
+        for (auto &record : symbolTable->records) {
+            if (record->name == name) {
                 return true;
             }
         }

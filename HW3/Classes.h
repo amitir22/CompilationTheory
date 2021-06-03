@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <stack>
 #include <string>
 #include <cstring>
 #include <utility>
@@ -16,14 +17,10 @@ extern char * yytext;
 
 using namespace std;
 
-// Single row in the table of a scope
 class SymbolTableRecord {
 public:
-    string name;
-    // This is for variables and function definitions
-    // For a variable, the type at cell 0 is the actual type, other cells should be empty
-    // For a function, all types except the last one, are parameter types, the last type is the return type of the function
-    vector<string> type;
+    string name; // basically the identifier (variable/function name)
+    vector<string> type; // will have singular value if a variable and if a function the last type is the RetType
     int offset;
     bool isFunc;
 
@@ -31,16 +28,12 @@ public:
             : name(std::move(name)), type(std::move(type)), offset(offset), isFunc(isFunc) { }
 };
 
-// The object storing the entries of the current scope
 class SymbolTable {
 public:
     vector<shared_ptr<SymbolTableRecord>> records;
 
     SymbolTable() = default;
 };
-
-// Note: my goal with these Variable classes is to minimize the logic needed in the
-//       parser.ypp and scanner.lex files using the default and the explicit constructors.
 
 class Variable {
 public:
@@ -78,6 +71,9 @@ public:
 };
 
 class Program : public Variable {
+private:
+    shared_ptr<SymbolTableRecord> initPrintFunc();
+    shared_ptr<SymbolTableRecord> initPrintIFunc();
 public:
     Program();
 };
@@ -88,6 +84,9 @@ public:
 };
 
 class FuncDecl : public Variable {
+private:
+    shared_ptr<SymbolTableRecord> buildSymbolTableRecordFromFuncDecl();
+
 public:
     // function parameters types
     vector<string> functionParamsTypes;
@@ -141,11 +140,8 @@ public:
 };
 
 class Statement : public Variable {
-public:
-    string dataTag;
-
-    // Statement -> LBRACE Statements RBRACE
-    explicit Statement(Statements *statements);
+public:// Statement -> LBRACE Statements RBRACE
+    explicit Statement(Statements *statements) { }
 
     // Statement -> Type ID SC
     Statement(Type *type, Variable *id);
@@ -157,7 +153,7 @@ public:
     Statement(Variable *id, Exp *exp);
 
     // Statement -> Call SC
-    explicit Statement(Call *call);
+    explicit Statement(Call *call) { }
 
     // Statement -> RETURN SC
     explicit Statement(const string& funcReturnType);
@@ -211,7 +207,7 @@ public:
     explicit Exp(Variable *variable);
 
     // Exp -> Call
-    explicit Exp(Call *call);
+    explicit Exp(Call *call) : Variable(call->value), type(call->value) { }
 
     // tl;dr: handles NUM, NUM B, STRING, TRUE and FALSE
     Exp(Variable *variable, string taggedType);
