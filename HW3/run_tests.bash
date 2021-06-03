@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "TESTS:"
-for num in {1..60}
+for num in {1..61}
 do
   ./hw3 < "tests/t$num.in" &> "more_tests/t$num.res"
   result="FAILED"
