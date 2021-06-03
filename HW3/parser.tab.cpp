@@ -129,10 +129,10 @@ enum yysymbol_kind_t
   YYSYMBOL_ASSIGN = 21,                    /* ASSIGN  */
   YYSYMBOL_OR = 22,                        /* OR  */
   YYSYMBOL_AND = 23,                       /* AND  */
-  YYSYMBOL_EQ_NEQ_RELOP = 24,              /* EQ_NEQ_RELOP  */
-  YYSYMBOL_REL_RELOP = 25,                 /* REL_RELOP  */
-  YYSYMBOL_ADD_SUB_BINOP = 26,             /* ADD_SUB_BINOP  */
-  YYSYMBOL_MUL_DIV_BINOP = 27,             /* MUL_DIV_BINOP  */
+  YYSYMBOL_EQ = 24,              /* EQ  */
+  YYSYMBOL_REL = 25,                 /* REL  */
+  YYSYMBOL_PLUS_MINUS = 26,             /* PLUS_MINUS  */
+  YYSYMBOL_MUL_DIV = 27,             /* MUL_DIV  */
   YYSYMBOL_NOT = 28,                       /* NOT  */
   YYSYMBOL_SWITCH = 29,                    /* SWITCH  */
   YYSYMBOL_CASE = 30,                      /* CASE  */
@@ -580,7 +580,7 @@ static const char *const yytname[] =
   "\"end of file\"", "error", "\"invalid token\"", "VOID", "INT", "BYTE",
   "B", "BOOL", "TRUE", "FALSE", "RETURN", "IF", "ELSE", "WHILE", "BREAK",
   "CONTINUE", "SC", "COMMA", "ID", "NUM", "STRING", "ASSIGN", "OR", "AND",
-  "EQ_NEQ_RELOP", "REL_RELOP", "ADD_SUB_BINOP", "MUL_DIV_BINOP", "NOT",
+  "EQ", "REL", "PLUS_MINUS", "MUL_DIV", "NOT",
   "SWITCH", "CASE", "DEFAULT", "COLON", "RBRACE", "LBRACE", "RPAREN",
   "LPAREN", "SECOND_PRIOR", "FIRST_PRIOR", "$accept", "Program", "@1",
   "Funcs", "FuncDecl", "@2", "$@3", "$@4", "RetType", "Formals",
@@ -1568,18 +1568,18 @@ yyreduce:
 #line 1569 "parser.tab.cpp"
     break;
 
-  case 46: /* Exp: Exp ADD_SUB_BINOP Exp  */
+  case 46: /* Exp: Exp PLUS_MINUS Exp  */
 #line 245 "parser.ypp"
                 {
-                    yyval = new Exp(dynamic_cast<Exp*>(yyvsp[-2]),yyvsp[-1],dynamic_cast<Exp*>(yyvsp[0]), "ADD_SUB_BINOP");
+                    yyval = new Exp(dynamic_cast<Exp*>(yyvsp[-2]),yyvsp[-1],dynamic_cast<Exp*>(yyvsp[0]), "PLUS_MINUS");
                 }
 #line 1577 "parser.tab.cpp"
     break;
 
-  case 47: /* Exp: Exp MUL_DIV_BINOP Exp  */
+  case 47: /* Exp: Exp MUL_DIV Exp  */
 #line 250 "parser.ypp"
                 {
-                    yyval = new Exp(dynamic_cast<Exp*>(yyvsp[-2]), yyvsp[-1], dynamic_cast<Exp*>(yyvsp[0]), "MUL_DIV_BINOP");
+                    yyval = new Exp(dynamic_cast<Exp*>(yyvsp[-2]), yyvsp[-1], dynamic_cast<Exp*>(yyvsp[0]), "MUL_DIV");
                 }
 #line 1585 "parser.tab.cpp"
     break;
@@ -1664,18 +1664,18 @@ yyreduce:
 #line 1665 "parser.tab.cpp"
     break;
 
-  case 58: /* Exp: Exp EQ_NEQ_RELOP Exp  */
+  case 58: /* Exp: Exp EQ Exp  */
 #line 305 "parser.ypp"
                 {
-                    yyval = new Exp(dynamic_cast<Exp*>(yyvsp[-2]), yyvsp[-1], dynamic_cast<Exp*>(yyvsp[0]), "EQ_NEQ_RELOP");
+                    yyval = new Exp(dynamic_cast<Exp*>(yyvsp[-2]), yyvsp[-1], dynamic_cast<Exp*>(yyvsp[0]), "EQ");
                 }
 #line 1673 "parser.tab.cpp"
     break;
 
-  case 59: /* Exp: Exp REL_RELOP Exp  */
+  case 59: /* Exp: Exp REL Exp  */
 #line 310 "parser.ypp"
                 {
-                    yyval = new Exp(dynamic_cast<Exp*>(yyvsp[-2]), yyvsp[-1], dynamic_cast<Exp*>(yyvsp[0]), "REL_RELOP");
+                    yyval = new Exp(dynamic_cast<Exp*>(yyvsp[-2]), yyvsp[-1], dynamic_cast<Exp*>(yyvsp[0]), "REL");
                 }
 #line 1681 "parser.tab.cpp"
     break;

@@ -367,8 +367,8 @@ Exp::Exp(Exp *exp) {
 Exp::Exp(Exp *exp1, Variable *op, Exp *exp2, const string &taggedType) {
     bool isE1Num = exp1->type == "INT" || exp1->type == "BYTE";
     bool isE2Num = exp2->type == "INT" || exp2->type == "BYTE";
-    bool isRelOp = taggedType == "EQ_NEQ_RELOP" || taggedType == "REL_RELOP";
-    bool isBinOp = taggedType == "ADD_SUB_BINOP" || taggedType == "MUL_DIV_BINOP";
+    bool isRelOp = taggedType == "EQ" || taggedType == "REL";
+    bool isBinOp = taggedType == "PLUS_MINUS" || taggedType == "MUL_DIV";
     bool isBoolOp = taggedType == "AND" || taggedType == "OR";
 
     if (isE1Num && isE2Num) {

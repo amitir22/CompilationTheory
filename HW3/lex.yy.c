@@ -970,22 +970,22 @@ yylval=new Variable(yytext); return ASSIGN;
 case 28:
 YY_RULE_SETUP
 #line 46 "scanner.lex"
-yylval=new Variable(yytext); return EQ_NEQ_RELOP;
+yylval=new Variable(yytext); return EQ;
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
 #line 47 "scanner.lex"
-yylval=new Variable(yytext); return REL_RELOP;
+yylval=new Variable(yytext); return REL;
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
 #line 48 "scanner.lex"
-yylval=new Variable(yytext); return ADD_SUB_BINOP;
+yylval=new Variable(yytext); return PLUS_MINUS;
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
 #line 49 "scanner.lex"
-yylval=new Variable(yytext); return MUL_DIV_BINOP;
+yylval=new Variable(yytext); return MUL_DIV;
 	YY_BREAK
 case 32:
 /* rule 32 can match eol */

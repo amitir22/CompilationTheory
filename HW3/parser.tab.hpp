@@ -75,10 +75,10 @@ extern int yydebug;
     ASSIGN = 276,                  /* ASSIGN  */
     OR = 277,                      /* OR  */
     AND = 278,                     /* AND  */
-    EQ_NEQ_RELOP = 279,            /* EQ_NEQ_RELOP  */
-    REL_RELOP = 280,               /* REL_RELOP  */
-    ADD_SUB_BINOP = 281,           /* ADD_SUB_BINOP  */
-    MUL_DIV_BINOP = 282,           /* MUL_DIV_BINOP  */
+    EQ = 279,            /* EQ  */
+    REL = 280,               /* REL  */
+    PLUS_MINUS = 281,           /* PLUS_MINUS  */
+    MUL_DIV = 282,           /* MUL_DIV  */
     NOT = 283,                     /* NOT  */
     SWITCH = 284,                  /* SWITCH  */
     CASE = 285,                    /* CASE  */

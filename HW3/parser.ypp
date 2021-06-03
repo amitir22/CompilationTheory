@@ -31,10 +31,10 @@
 %right ASSIGN;
 %left OR;
 %left AND;
-%left EQ_NEQ_RELOP;
-%nonassoc REL_RELOP;
-%left ADD_SUB_BINOP;
-%left MUL_DIV_BINOP;
+%left EQ;
+%nonassoc REL;
+%left PLUS_MINUS;
+%left MUL_DIV;
 %right NOT;
 %nonassoc SWITCH;
 %nonassoc CASE;
@@ -243,14 +243,14 @@ Exp:            LPAREN Exp RPAREN
                     $$ = new Exp(dynamic_cast<Exp*>($2));
                 }
 
-Exp:            Exp ADD_SUB_BINOP Exp
+Exp:            Exp PLUS_MINUS Exp
                 {
-                    $$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "ADD_SUB_BINOP");
+                    $$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3), "PLUS_MINUS");
                 }
 
-Exp:            Exp MUL_DIV_BINOP Exp
+Exp:            Exp MUL_DIV Exp
                 {
-                    $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "MUL_DIV_BINOP");
+                    $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "MUL_DIV");
                 }
 
 Exp:            ID
@@ -303,14 +303,14 @@ Exp:            Exp OR Exp
                     $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "OR");
                 }
 
-Exp:            Exp EQ_NEQ_RELOP Exp
+Exp:            Exp EQ Exp
                 {
-                    $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "EQ_NEQ_RELOP");
+                    $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "EQ");
                 }
 
-Exp:            Exp REL_RELOP Exp
+Exp:            Exp REL Exp
                 {
-                    $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "REL_RELOP");
+                    $$ = new Exp(dynamic_cast<Exp*>($1), $2, dynamic_cast<Exp*>($3), "REL");
                 }
 
 CaseList:       CaseDecl CaseList

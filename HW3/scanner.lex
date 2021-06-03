@@ -46,10 +46,10 @@ whitespace  ([\t\n\r ])
 (\{)                                yylval=new Variable(yytext); return LBRACE;
 (\})                                yylval=new Variable(yytext); return RBRACE;
 (=)                                 yylval=new Variable(yytext); return ASSIGN;
-((==)|(!=))                         yylval=new Variable(yytext); return EQ_NEQ_RELOP;
-((\<=)|(\>=)|(\<)|(\>))             yylval=new Variable(yytext); return REL_RELOP;
-((\+)|(\-))                         yylval=new Variable(yytext); return ADD_SUB_BINOP;
-((\*)|(\/))                         yylval=new Variable(yytext); return MUL_DIV_BINOP;
+((==)|(!=))                         yylval=new Variable(yytext); return EQ;
+((\<=)|(\>=)|(\<)|(\>))             yylval=new Variable(yytext); return REL;
+((\+)|(\-))                         yylval=new Variable(yytext); return PLUS_MINUS;
+((\*)|(\/))                         yylval=new Variable(yytext); return MUL_DIV;
 ({letter}({letter}|{digit})*)       yylval=new Variable(yytext); return ID;
 (0|{nozerodigit}{digit}*)           yylval=new Variable(yytext); return NUM;
 (\/\/[^\r\n]*(\r|\n|\r\n)?)          ;
