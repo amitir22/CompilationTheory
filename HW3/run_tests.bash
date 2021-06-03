@@ -14,8 +14,8 @@ do
   echo "TEST $num: $result"
 
 done
-
 echo ''
+
 echo "YO TESTS:"
 
 for num in {1..3}
@@ -31,3 +31,4 @@ do
 
   echo "TEST YO $num: $result"
 done
+echo ''
