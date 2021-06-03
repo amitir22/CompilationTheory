@@ -15,10 +15,10 @@ nozerodigit ([1-9])
 letter  ([a-zA-Z])
 whitespace  ([\t\n\r ])
 
-/* Note: initialize all tokens as Variable objects which would later point to
-         the correct subclass of Variable using Polymorphism principles */
+
 
 %%
+{whitespace}                         ;
 (void)                              yylval=new Variable(yytext); return VOID;
 (int)                               yylval=new Variable(yytext); return INT;
 (byte)                              yylval=new Variable(yytext); return BYTE;
@@ -50,10 +50,9 @@ whitespace  ([\t\n\r ])
 ((\<=)|(\>=)|(\<)|(\>))             yylval=new Variable(yytext); return REL_RELOP;
 ((\+)|(\-))                         yylval=new Variable(yytext); return ADD_SUB_BINOP;
 ((\*)|(\/))                         yylval=new Variable(yytext); return MUL_DIV_BINOP;
-(\/\/[^\r\n]*(\r|\n|\r\n)?)          ;
 ({letter}({letter}|{digit})*)       yylval=new Variable(yytext); return ID;
 (0|{nozerodigit}{digit}*)           yylval=new Variable(yytext); return NUM;
-{whitespace}                         ;
+(\/\/[^\r\n]*(\r|\n|\r\n)?)          ;
 (\"([^\n\r\"\\]|\\[rnt"\\])+\")     yylval=new Variable(yytext); return STRING;
 .                                   output::errorLex(yylineno); exit(0);
 

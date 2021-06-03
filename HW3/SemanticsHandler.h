@@ -72,6 +72,11 @@ class Exp;
 class CaseList;
 class CaseDecl;
 
+class Type : public Variable {
+public:
+    explicit Type(Variable *type) : Variable(type->value) { }
+};
+
 class Program : public Variable {
 public:
     Program();
@@ -190,10 +195,6 @@ public:
     ExpList(Exp *exp, ExpList *expList);
 };
 
-class Type : public Variable {
-public:
-    explicit Type(Variable *type) : Variable(type->value) { }
-};
 
 class Exp : public Variable {
 public:

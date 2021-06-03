@@ -81,7 +81,7 @@ FuncDecl::FuncDecl(RetType *retType, Variable *id, Formals *funcParams) {
     if (funcParams->formals.size() != 0) {
         // Saving the types of all the different function parameters
         for (auto &formal : funcParams->formals) {
-            functionParamsTypes.push_back(formal->type);
+            functionParamsTypes.push_back(formal->paramType);
         }
     } else {
         // The func has no input parameters, no need to add a specific parameter type
@@ -312,14 +312,14 @@ Call::Call(Variable *id, ExpList *list) {
                     // We found a declaration of a variable with the same name, illegal
                     output::errorUndefFunc(yylineno, id->value);
                     exit(0);
-                } else if (row->isFunc && row->type.size() == list->list.size() + 1) {
+                } else if (row->isFunc && row->type.size() == list->expressionsList.size() + 1) {
                     // We found the right function, has the same name, it really is a function
                     // Now we need to check that the parameter types are correct between what the function accepts, and what was sent
-                    for (unsigned int i = 0; i < list->list.size(); ++i) {
-                        if (list->list[i].type == row->type[i]) {
+                    for (unsigned int i = 0; i < list->expressionsList.size(); ++i) {
+                        if (list->expressionsList[i].type == row->type[i]) {
                             // This parameter is of matching type so it is ok
                             continue;
-                        } else if (list->list[i].type == "BYTE" && row->type[i] == "INT") {
+                        } else if (list->expressionsList[i].type == "BYTE" && row->type[i] == "INT") {
                             // The function receives int as a paramter, in this instance a byte was sent, but it is ok to cast from BYTE to INT
                             continue;
                         }
@@ -354,7 +354,7 @@ ExpList::ExpList(Exp *exp) {
 }
 
 ExpList::ExpList(Exp *exp, ExpList *expList) {
-    expressionsList = vector<Exp>(expList->list);
+    expressionsList = vector<Exp>(expList->expressionsList);
     expressionsList.insert(expressionsList.begin(), exp);
 }
 
@@ -562,7 +562,7 @@ void GlobalSemanticStateHandler::exitProgramRuntimeState() {
 // TODO: edit
 void GlobalSemanticStateHandler::insertFunctionParameters(Formals *formals) {
     for (unsigned int i = 0; i < formals->formals.size(); ++i) {
-        vector<string> nType = {formals->formals[i]->type};
+        vector<string> nType = {formals->formals[i]->paramType};
         shared_ptr<SymbolTableRecord> nParameter = make_shared<SymbolTableRecord>(formals->formals[i]->value, nType, -i - 1, false);
         symbolTablesStack.back()->records.push_back(nParameter);
     }
