@@ -49,6 +49,8 @@
 %nonassoc FIRST_PRIOR;
 %%
 
+/* Note: dynamic casts are done to force the correct constructors */
+
 Program :       {
                     $$ = new Program();
                 } Funcs
@@ -335,6 +337,7 @@ OpenScope:      {
                     GlobalSemanticStateHandler::openScope();
                 }
 
+/* CloseScope is basically CS */
 CloseScope:     {
                     GlobalSemanticStateHandler::closeScope();
                 }

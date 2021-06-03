@@ -15,6 +15,9 @@ nozerodigit ([1-9])
 letter  ([a-zA-Z])
 whitespace  ([\t\n\r ])
 
+/* Note: initialize all tokens as Variable objects which would later point to
+         the correct subclass of Variable using Polymorphism principles */
+
 %%
 (void)                              yylval=new Variable(yytext); return VOID;
 (int)                               yylval=new Variable(yytext); return INT;
