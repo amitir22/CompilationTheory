@@ -37,7 +37,7 @@ public:
 
 class Variable {
 public:
-    string value; // TODO: edit ?
+    string value;
 
     Variable();
 
