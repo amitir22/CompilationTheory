@@ -1,9 +1,11 @@
 #ifndef HW3_SEMANTICS_HANDLER_H
 #define HW3_SEMANTICS_HANDLER_H
 
+#include <iostream>
 #include <memory>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <utility>
 #include "hw3_output.hpp"
 
@@ -11,32 +13,8 @@
 
 extern int yylineno;
 extern char * yytext;
+
 using namespace std;
-
-void enterSwitch();
-void exitSwitch();
-void enterLoop();
-void exitLoop();
-void exitProgramFuncs();
-void exitProgramRuntime();
-void openNewScope();
-void closeCurrentScope();
-void printMessage(string message);
-bool isDeclared(const string &name);
-bool isDeclaredVariable(const string &name);
-
-class Variable {
-public:
-    string value;
-
-    explicit Variable(string str);
-
-    Variable();
-
-    virtual ~Variable() = default;
-
-    friend ostream &operator<<(ostream &os, const Variable &node);
-};
 
 // Single row in the table of a scope
 class SymbolTableRow {
@@ -60,38 +38,50 @@ public:
     SymbolTable() = default;
 };
 
+class Variable {
+public:
+    string value;
+
+    explicit Variable(string str);
+
+    Variable();
+
+    virtual ~Variable() = default;
+
+    friend ostream &operator<<(ostream &os, const Variable &node);
+};
+
 class Type : public Variable {
 public:
     explicit Type(Variable *type);
 };
 
-class Call;
+class Call; // declaration used for cyclic class dependencies
 
 class Exp : public Variable {
 public:
-    // Type is used for tagging in bison when creating the Exp object
-    string type;
+    string type; // used when bison creates the Exp object
     bool valueAsBooleanValue;
 
-    // This is for NUM, NUM B, STRING, TRUE and FALSE
+    // tl;dr: handles NUM, NUM B, STRING, TRUE and FALSE
     Exp(Variable *terminal, string taggedTypeFromParser);
 
-    // for Call
+    // Exp -> Call
     explicit Exp(Call *call);
 
-    // for exp in switch
+    // tl;dr: handles Exp in switch scope
     Exp(Exp *e1, string tag);
 
-    // for NOT Exp
+    // Exp -> NOT Exp
     Exp(Variable *notNode, Exp *exp);
 
-    // for Exp RELOP, MUL, DIV, ADD, SUB, OR, AND Exp
+    // tl;dr: handles RELOP, MUL, DIV, ADD, SUB, OR, AND expressions
     Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedTypeFromParser);
 
-    // for Exp ID
+    // Exp -> ID
     explicit Exp(Variable *id);
 
-    // for Lparen Exp Rparen, need to just remove the parentheses
+    // Exp -> LPAREN Exp RPAREN
     Exp(Exp *ex);
 };
 
@@ -99,15 +89,19 @@ class ExpList : public Variable {
 public:
     vector<Exp> list;
 
+    // ExpList -> Exp
     explicit ExpList(Exp *exp);
 
+    // ExpList -> Exp COMMA ExpList
     ExpList(Exp *exp, ExpList *expList);
 };
 
 class Call : public Variable {
 public:
+    // Call -> ID LPAREN ExpList RPAREN
     Call(Variable *id, ExpList *list);
 
+    // Call -> ID LPAREN RPAREN
     explicit Call(Variable *id);
 };
 
@@ -116,58 +110,57 @@ public:
     explicit RetType(Variable *type);
 };
 
-class Statements;
+class Statements; // declaration used for cyclic class dependencies
 
-class CaseList;
-
+class CaseList; // declaration used for cyclic class dependencies
 
 class Statement : public Variable {
 public:
     string dataTag;
 
-    // For Lbrace Statements Rbrace
+    // Statement -> LBRACE Statements RBRACE
     explicit Statement(Statements *states);
 
-    // For Type ID SC
+    // Statement -> Type ID SC
     Statement(Type *t, Variable *id);
 
-    // For Type ID Assign Exp SC
+    // Statement -> Type ID ASSIGN Exp SC
     Statement(Type *t, Variable *id, Exp *exp);
 
-    // For ID Assign Exp SC
+    // Statement -> ID ASSIGN Exp SC
     Statement(Variable *id, Exp *exp);
 
-    // For Call SC
+    // Statement -> Call SC
     explicit Statement(Call *call);
 
-    // For Return SC -> this is for a function with a void return type
+    // Statement -> RETURN SC
     explicit Statement(const string& funcReturnType);
 
-    // For Return Exp SC -> This is for a non-void function, exp stores the type so it is enough
+    // Statement -> RETURN Exp SC
     explicit Statement(Exp *exp);
 
-    // For if,if/else,while
+    // Statement -> tl;dr: handles if, if-else, while
     Statement(string type, Exp *exp);
 
-    // For break,continue
+    // Statement -> tl;dr: handles break, continue
     explicit Statement(Variable *type);
 
-    // For Switch LParen Exp RParen Lbrace CaseList Rbrace
+    // Statement -> SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE
     Statement(Exp *exp, CaseList *cList);
 };
 
 class Statements : public Variable {
 public:
-    // For Statement
+    // Statements -> Statement
     explicit Statements(Statement *state);
 
-    // For Statements Statement
+    // Statements -> Statements Statement
     Statements(Statements *states, Statement *state);
 };
 
 class CaseDecl : public Variable {
 public:
-    // For Case Num Colon Statements
+    // CaseDecl -> CASE NUM COLON Statements
     CaseDecl(Exp *num, Statements *states);
 };
 
@@ -175,13 +168,13 @@ class CaseList : public Variable {
 public:
     vector<CaseDecl *> cases;
 
-    // For CaseDecl CaseList
+    // CaseList -> CaseDecl CaseList
     CaseList(CaseDecl *cDec, CaseList *cList);
 
-    // For CaseDecl
+    // CaseList -> CaseDecl
     explicit CaseList(CaseDecl *cDec);
 
-    // For Default Colon Statements
+    // CaseList -> DEFAULT COLON Statements
     explicit CaseList(Statements *states);
 };
 
@@ -190,7 +183,7 @@ public:
     // The parameter type
     string type;
 
-    // for Type ID
+    // FormalDecl -> Type ID
     FormalDecl(Type *t, Variable *id);
 };
 
@@ -198,10 +191,10 @@ class FormalsList : public Variable {
 public:
     vector<FormalDecl *> formals;
 
-    // To initialize from an empty formal list
+    // FormalsList -> FormalDecl
     explicit FormalsList(FormalDecl *formal);
 
-    // To append a new formal to an existing formal list
+    // FormalsList -> FormalDecl COMMA FormalsList
     FormalsList(FormalDecl *formal, FormalsList *fList);
 };
 
@@ -209,18 +202,19 @@ class Formals : public Variable {
 public:
     vector<FormalDecl *> formals;
 
-    // for Epsilon
+    // Formals -> Epsilon
     Formals();
 
-    // for formalList
+    // Formals -> FormalsList
     explicit Formals(FormalsList *formList);
 };
 
 class FuncDecl : public Variable {
 public:
-    // This is an array to denote the types of the func parameters, with the func return type being the last elemtn of the array
-    vector<string> type;
+    // function parameters types
+    vector<string> type; // todo: rename to function_parameters_types
 
+    // FuncDecl -> RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE
     FuncDecl(RetType *rType, Variable *id, Formals *funcParams);
 };
 
@@ -234,6 +228,37 @@ public:
     Program();
 };
 
-void insertFunctionParameters(Formals *formals);
+namespace GlobalSemanticStateHandler {
+    // global variables declarations:
+    extern string currentRunningFunctionScopeId;
+    extern vector<shared_ptr<SymbolTable>> symTabStack;
+    extern vector<int> offsetStack;
+    extern vector<string> varTypes;
+    extern int loopCounter;
+    extern bool inSwitch;
+
+    // global functions declarations:
+
+    // printers:
+    void printVector(vector<string> vec);
+    void printMessage(string message);
+    void printSymTabRow(shared_ptr<SymbolTableRow> row);
+    void printSymTableStack();
+
+    // state handlers:
+    void enterSwitchState();
+    void exitSwitchState();
+    void enterLoopState();
+    void exitLoopState();
+    void exitProgramFuncsState(); // entering this state is already handled and happens once
+    void exitProgramRuntimeState(); // same as here ^
+    void openScope();
+    void closeScope();
+
+    // helper functions:
+    bool isDeclared(const string &name);
+    bool isDeclaredVariable(const string &name);
+    void insertFunctionParameters(Formals *formals);
+}
 
 #endif //HW3_SEMANTICS_HANDLER_H

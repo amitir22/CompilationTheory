@@ -1,11 +1,7 @@
 %{
 /* Declarations section */
-    #include <iostream>
-    #include <stdlib.h>
     #include "SemanticsHandler.h"
     #include "hw3_output.hpp"
-
-    using namespace std;
 
     extern int yylex();
     extern int yylineno;
@@ -57,7 +53,7 @@ Program :       {
                     $$ = new Program();
                 } Funcs
                 {
-                    exitProgramRuntime();
+                    GlobalSemanticStateHandler::exitProgramRuntimeState();
                 }
 
 Funcs :         %prec SECOND_PRIOR
@@ -75,10 +71,10 @@ FuncDecl:       RetType ID LPAREN Formals RPAREN
                     $$ = new FuncDecl(dynamic_cast<RetType*>($1),$2,dynamic_cast<Formals*>($4));
                 } LBRACE OpenScope
                 {
-                    insertFunctionParameters(dynamic_cast<Formals*>($4));
+                    GlobalSemanticStateHandler::insertFunctionParameters(dynamic_cast<Formals*>($4));
                 } Statements CloseScope
                 {
-                    exitProgramFuncs();
+                    GlobalSemanticStateHandler::exitProgramFuncsState();
                 } RBRACE
 
 RetType:        Type
@@ -163,22 +159,22 @@ Statement:      RETURN Exp SC
 Statement:      IF LPAREN Exp RPAREN OpenScope Statement %prec IF
                 {
                     $$ = new Statement("if", dynamic_cast<Exp*>($3));
-                    closeCurrentScope();
+                    GlobalSemanticStateHandler::closeScope();
                 }
 
 Statement:      IF LPAREN Exp RPAREN OpenScope Statement ELSE
                 {
                     $$ = new Statement("if else", dynamic_cast<Exp*>($3));
-                    closeCurrentScope();
+                    GlobalSemanticStateHandler::closeScope();
                 } OpenScope Statement CloseScope
 
 Statement:      WHILE LPAREN Exp RPAREN
                 {
                     $$ = new Statement("while", dynamic_cast<Exp*>($3));
-                    enterLoop();
+                    GlobalSemanticStateHandler::enterLoopState();
                 } OpenScope Statement CloseScope
                 {
-                    exitLoop();
+                    GlobalSemanticStateHandler::exitLoopState();
                 }
 
 Statement:      BREAK SC
@@ -193,7 +189,7 @@ Statement:      CONTINUE SC
 
 Statement:      SWITCH
                 {
-                    enterSwitch();
+                    GlobalSemanticStateHandler::enterSwitchState();
                 } LPAREN Exp
                 {
                     new Exp(dynamic_cast<Exp*>($4), "switch");
@@ -202,7 +198,7 @@ Statement:      SWITCH
                     $$ = new Statement(dynamic_cast<Exp*>($4), dynamic_cast<CaseList*>($9));
                 } CloseScope
                 {
-                    exitSwitch();
+                    GlobalSemanticStateHandler::exitSwitchState();
                 } RBRACE
 
 Call:           ID LPAREN ExpList RPAREN
@@ -336,11 +332,11 @@ CaseDecl:       CASE NUM COLON Statements
                 }
 
 OpenScope:      {
-                    openNewScope();
+                    GlobalSemanticStateHandler::openScope();
                 }
 
 CloseScope:     {
-                    closeCurrentScope();
+                    GlobalSemanticStateHandler::closeScope();
                 }
 
 %%
