@@ -35,9 +35,13 @@ public:
     SymbolTable() = default;
 };
 
+// todo: remove comments here:
+// added from reference as the equivalent class: TypeNode in Semantics.h
 class Variable {
 public:
+    string regName; // added from reference todo: delete comment
     string value;
+    string instruction; // added from reference todo: delete comment
 
     Variable();
 
