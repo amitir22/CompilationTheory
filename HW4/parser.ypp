@@ -38,6 +38,8 @@
         void exitProgramRuntimeState(); // same as here ^
 
         // helper functions:
+        string toLLVMType(string type);
+        string zeroExtendType(string originalReg, string llvmType);
         shared_ptr<SymbolTableRecord> makeParamSymbolRecord(string value,
                                                             vector<string> currentParamType,
                                                             int currentOffset);
@@ -567,12 +569,12 @@ FuncDecl::FuncDecl(RetType *retType, Variable *id, Formals *funcParams) {
     // generating llvm:
 
     string funcArgumentString = "(";
-    string funcReturnType = GetLLVMType(retType->value);
+    string funcReturnType = toLLVMType(retType->value);
 
     for (int i = 0; i < funcParams->formals.size(); ++i) {
         // todo: change/remove comment
         // The function has parameters which need to be printed in the LLVM function declaration
-        funcArgumentString += GetLLVMType(funcParams->formals[i]->type);
+        funcArgumentString += toLLVMType(funcParams->formals[i]->type);
 
         // todo: figure out how can change loop to iterator/foreach and still:
         // todo: idea: maybe change loop into iterator loop and start with i=1 and put the ',' \
@@ -595,7 +597,7 @@ FuncDecl::FuncDecl(RetType *retType, Variable *id, Formals *funcParams) {
     for (int i = 0; i < funcParams->formals.size(); ++i) {
         string ptrRegister = registerPool.GetNewRegister();
         string dataRegister = to_string(i);
-        string funcArgumentType = GetLLVMType(funcParams->formals[i]->type);
+        string funcArgumentType = toLLVMType(funcParams->formals[i]->type);
 
         buffer.emit("%" + ptrRegister + " = getelementptr [" + to_string(funcParams->formals.size()) + " x i32], [" +
                     to_string(funcParams->formals.size()) + " x i32]* %args, i32 0, i32 " + to_string(currentRunningFunctionArgumentsNumber - i - 1));
