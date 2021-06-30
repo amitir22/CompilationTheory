@@ -41,7 +41,10 @@
         shared_ptr<SymbolTableRecord> makeParamSymbolRecord(string value,
                                                             vector<string> currentParamType,
                                                             int currentOffset);
+        Statement *mergeIfElseLists(Statement *ifStatement, Statement *elseStatement);
         void insertFunctionParametersToSymbolTable(Formals *formals);
+        void backpatchIf(M *label, Exp *exp);
+        void backpatchIfElse(M *label1, M *label2, Exp *exp);
         bool isDeclaredVariable(const string &name);
         bool isDeclared(const string &name);
     }
