@@ -12,6 +12,7 @@
 
     int yyerror(const char * message);
 
+    // todo: make sure all the functions here are reimplemented
     namespace GlobalSemanticStateHandler {
         // global variables declarations:
         vector<shared_ptr<SymbolTable>> symbolTablesStack; // stack of SymbolTables for scope-management
