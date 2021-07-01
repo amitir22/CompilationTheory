@@ -10,11 +10,44 @@
 
     namespace GlobalSemanticStateHandler {
         // global variables declarations:
+        //todo:start
+        int switchId = 0;
+        int maxSwitch = 0;
+        Registers registerPool;
+        CodeBuffer &buffer = CodeBuffer::instance();
+        //todo:end
         vector<shared_ptr<SymbolTable>> symbolTablesStack; // stack of SymbolTables for scope-management
         stack<int> offsetStack; // stack used to keep track of the current offsets in nested scopes
         int nestedLoopDepth = 0; // counter variable used to keep track of the nested loops' depth.
         bool isInSwitchState = false; // self explanatory indicator flag
         string currentFunctionId; // value is always "" except if we are within a function scope
+        //todo:start
+        int currentRunningFunctionArgumentsNumber = 0;
+        int switchCounter = 0;
+
+        string GetLLVMType(string type) {
+            if (type == "VOID") {
+                if (DEBUG) printMessage("void type");
+                return "void";
+            } else if (type == "BOOL") {
+                if (DEBUG) printMessage("i1 type");
+                return "i1";
+            } else if (type == "BYTE") {
+                if (DEBUG) printMessage("i8 type");
+                return "i8";
+            } else if (type == "STRING") {
+                if (DEBUG) printMessage("i8 pointer type");
+                return "i8*";
+            } else return "i32";
+        }
+
+        string zeroExtendType(string originalReg, string llvmType) {
+            string destReg = registerPool.GetNewRegister();
+            buffer.emit("%" + destReg + " = zext " + llvmType + " %" + originalReg + " to i32");
+            return destReg;
+        }
+
+        //todo:end
 
         // global functions declarations:
 
@@ -879,6 +912,12 @@ void GlobalSemanticStateHandler::exitLoopState() {
 
 void GlobalSemanticStateHandler::enterSwitchState() {
     isInSwitchState = true;
+
+    //todo:start
+        switchCounter++;
+        maxSwitch++;
+        switchId = maxSwitch;
+    //todo:end
 }
 
 void GlobalSemanticStateHandler::exitSwitchState() {
