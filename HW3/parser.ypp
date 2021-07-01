@@ -839,18 +839,11 @@ void GlobalSemanticStateHandler::openScope() {
 void GlobalSemanticStateHandler::closeScope() {
     shared_ptr<SymbolTable> currentSymbolTable = symbolTablesStack.back();
 
-    output::endScope();
-
     for (auto &record : currentSymbolTable->records) {
-        if (!record->isFunc) {
-            output::printID(record->name, record->offset, record->type[0]);
-        } else {
+        if (record->isFunc){
             string funcReturnType = record->type.back();
-
             // that's the return type from the vector
             record->type.pop_back();
-            output::printID(record->name, record->offset,
-                            output::makeFunctionType(funcReturnType, record->type));
         }
     }
 

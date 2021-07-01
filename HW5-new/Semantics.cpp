@@ -4,6 +4,7 @@
 #include "iostream"
 #include <memory>
 #include <cstring>
+#include <stack>
 
 extern char *yytext;
 int switchId = 0;
@@ -11,21 +12,13 @@ int maxSwitch = 0;
 Registers registerPool;
 CodeBuffer &buffer = CodeBuffer::instance();
 vector<shared_ptr<SymbolTable>> symbolTablesStack;
-vector<int> offsetStack;
-vector<string> varTypes = {"VOID", "INT", "BYTE", "BOOL", "STRING"};
+stack<int> offsetStack;
 
-string currentRunningFunctionScopeId;
-int currentRunningFunctionArgumentsNumber = 0;
+string currentFunctionId;
+int argumentsCurrentFunction = 0;
+int loopCounter = 0;
+int switchCounter = 0;
 
-void printVector(vector<string> vec) {
-    for (auto &i : vec) {
-        std::cout << i << " ";
-    }
-}
-
-void printMessage(string message) {
-    std::cout << message << std::endl;
-}
 
 // Converts a FanC return type, to a LLVM return type
 string GetLLVMType(string type) {
@@ -40,30 +33,33 @@ string GetLLVMType(string type) {
     } else return "i32";
 }
 
-string zeroExtendType(string originalReg, string llvmType) {
-    string destReg = registerPool.GetNewRegister();
-    buffer.emit("%" + destReg + " = zext " + llvmType + " %" + originalReg + " to i32");
-    return destReg;
+string zeroExtendType(string original_register, string llvmType) {
+    string dest_register = registerPool.GetNewRegister();
+    buffer.emit("%" + dest_register + " = zext " + llvmType + " %" + original_register + " to i32");
+    return dest_register;
 }
 
-void printSymTabRow(shared_ptr<SymbolTableRecord> row) {
-    std::cout << row->name << " | ";
-    printVector(row->type);
-    std::cout << " | " << row->offset << " | " << row->isFunc << std::endl;
+void openScope() {
+    symbolTablesStack.push_back(make_shared<SymbolTable>());
+    offsetStack.push(offsetStack.top());
 }
 
-void printSymTableStack() {
-    std::cout << "Size of global symbol table stack is: " << symbolTablesStack.size() << std::endl;
-    std::cout << "id | parameter types | offset | is func" << std::endl;
-    for (int i = symbolTablesStack.size() - 1; i >= 0; --i) {
-        for (auto &row : symbolTablesStack[i]->records) {
-            printSymTabRow(row);
+void closeScope() {
+    shared_ptr<SymbolTable> currentSymbolTable = symbolTablesStack.back();
+
+    for (auto &record : currentSymbolTable->records) {
+        if (record->isFunc){
+            string funcReturnType = record->type.back();
+            // that's the return type from the vector
+            record->type.pop_back();
         }
     }
-}
 
-int loopCounter = 0;
-int switchCounter = 0;
+    currentSymbolTable->records.clear();
+    symbolTablesStack.pop_back();
+    offsetStack.pop();
+
+}
 
 void enterSwitchState() {
     switchCounter++;
@@ -113,53 +109,31 @@ void exitProgramFuncs(RetType *ret) {
         buffer.emit("ret " + funcReturnType + " 0");
     }
     buffer.emit("}");
-    currentRunningFunctionScopeId = "";
-    currentRunningFunctionArgumentsNumber = 0;
+    currentFunctionId = "";
+    argumentsCurrentFunction = 0;
 }
 
 void exitProgramRuntimeState() {
-    shared_ptr<SymbolTable> globalScope = symbolTablesStack.front();
-    bool mainFunc = false;
-    for (auto &row : globalScope->records) {
-        if (row->isFunc && row->name == "main" && row->type.back() == "VOID" && row->type.size() == 1) {
-            mainFunc = true;
+    shared_ptr<SymbolTable> globalScopeSymbolTable = symbolTablesStack.front();
+    bool doesMainFuncExist = false;
+
+    // looking if there's a main function in the symbol table of the global scope
+    for (auto &record : globalScopeSymbolTable->records) {
+        if (record->isFunc && record->name == "main" && record->type.back() == "VOID" &&
+            record->type.size() == 1) {
+            doesMainFuncExist = true;
         }
     }
-    if (!mainFunc) {
+
+    if (!doesMainFuncExist) {
         output::errorMainMissing();
+
         exit(0);
     }
+
     closeScope();
     buffer.printGlobalBuffer();
     buffer.printCodeBuffer();
-
-}
-
-void openScope() {
-    shared_ptr<SymbolTable> nScope = make_shared<SymbolTable>();
-    symbolTablesStack.push_back(nScope);
-    offsetStack.push_back(offsetStack.back());
-}
-
-void closeScope() {
-    //output::endScope();
-    shared_ptr<SymbolTable> currentScope = symbolTablesStack.back();
-    for (auto &row : currentScope->records) {
-        if (!row->isFunc) {
-            // Print a normal variable
-            //output::printID(row->name, row->offset, row->type[0]);
-        } else {
-            string funcReturnType = row->type.back();
-            // Taking out the return type from the vector for easy printing
-            row->type.pop_back();
-//            output::printID(row->name, row->offset,
-//                            output::makeFunctionType(funcReturnType, row->type));
-        }
-    }
-
-    currentScope->records.clear();
-    symbolTablesStack.pop_back();
-    offsetStack.pop_back();
 
 }
 
@@ -232,7 +206,7 @@ Program::Program() : Variable("Program") {
     // Placing the global symbol table at the bottom of the global symbol table stack
     symbolTablesStack.push_back(symTab);
     // Placing the global symbol table at the bottom of the offset stack
-    offsetStack.push_back(0);
+    offsetStack.push(0);
 
     // Declaring staff functions in LLVM code
     buffer.emitGlobal("declare i32 @printf(i8*, ...)");
@@ -316,8 +290,8 @@ FuncDecl::FuncDecl(RetType *rType, Variable *id, Formals *funcParams) {
     // Adding the new function to the symTab
     shared_ptr<SymbolTableRecord> nFunc = std::make_shared<SymbolTableRecord>(value, functionParamsTypes, 0, true);
     symbolTablesStack.back()->records.push_back(nFunc);
-    currentRunningFunctionScopeId = value;
-    currentRunningFunctionArgumentsNumber = funcParams->formals.size();
+    currentFunctionId = value;
+    argumentsCurrentFunction = funcParams->formals.size();
     string funcArgumentString = "(";
     for (int i = 0; i < funcParams->formals.size(); ++i) {
         // The function has parameters which need to be printed in the LLVM function declaration
@@ -338,7 +312,7 @@ FuncDecl::FuncDecl(RetType *rType, Variable *id, Formals *funcParams) {
         // creating registers for all func parameters
         string ptrRegister = registerPool.GetNewRegister();
         buffer.emit("%" + ptrRegister + " = getelementptr [" + to_string(funcParams->formals.size()) + " x i32], [" +
-                    to_string(funcParams->formals.size()) + " x i32]* %args, i32 0, i32 " + to_string(currentRunningFunctionArgumentsNumber - i - 1));
+                    to_string(funcParams->formals.size()) + " x i32]* %args, i32 0, i32 " + to_string(argumentsCurrentFunction - i - 1));
         string dataRegister = to_string(i);
         string funcArgumentType = GetLLVMType(funcParams->formals[i]->paramType);
         if (funcArgumentType != "i32") {
@@ -818,11 +792,11 @@ string loadVariableFromSymTab(int offset, string type) {
 
         // this variable is declared inside the function, and not part of the function parameters
         buffer.emit("%" + ptrRegister + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
-    } else if (offset < 0 && currentRunningFunctionArgumentsNumber > 0) {
+    } else if (offset < 0 && argumentsCurrentFunction > 0) {
         // this variable is one of the function parameters
-        buffer.emit("%" + ptrRegister + " = getelementptr [" + to_string(currentRunningFunctionArgumentsNumber) + " x i32], [" +
-                    to_string(currentRunningFunctionArgumentsNumber) + " x i32]* %args, i32 0, i32 " +
-                    to_string(currentRunningFunctionArgumentsNumber + offset));
+        buffer.emit("%" + ptrRegister + " = getelementptr [" + to_string(argumentsCurrentFunction) + " x i32], [" +
+                    to_string(argumentsCurrentFunction) + " x i32]* %args, i32 0, i32 " +
+                    to_string(argumentsCurrentFunction + offset));
     }
     // load the value pointed by the pointer, into the register
     buffer.emit("%" + reg + " = load i32, i32* %" + ptrRegister);
@@ -909,7 +883,7 @@ Statement::Statement(const string &funcReturnType) {
     for (int i = symbolTablesStack.size() - 1; i >= 0; i--) {
         // Need to search in the current symtab with no particular order for the current function
         for (auto &row : symbolTablesStack[i]->records) {
-            if (row->isFunc && row->name == currentRunningFunctionScopeId) {
+            if (row->isFunc && row->name == currentFunctionId) {
                 // We found the current running function
                 if (row->type.back() == funcReturnType) {
                     dataTag = "void return value";
@@ -934,7 +908,7 @@ Statement::Statement(Exp *exp) {
     for (int i = symbolTablesStack.size() - 1; i >= 0; i--) {
         // Need to search in the current symtab with no particular order for the current function
         for (auto &row : symbolTablesStack[i]->records) {
-            if (row->isFunc && row->name == currentRunningFunctionScopeId) {
+            if (row->isFunc && row->name == currentFunctionId) {
                 // We found the current running function
                 if (row->type.back() == exp->type) {
                     dataTag = exp->value;
@@ -967,11 +941,11 @@ string saveNewDataOnStackVariable(string sourceReg, string sourceType, int offse
     if (offset >= 0) {
         // This is a stack assigned variable
         buffer.emit("%" + regPtr + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
-    } else if (offset < 0 && currentRunningFunctionArgumentsNumber > 0) {
+    } else if (offset < 0 && argumentsCurrentFunction > 0) {
         // This is a function parameter
-        buffer.emit("%" + regPtr + " = getelementptr [" + to_string(currentRunningFunctionArgumentsNumber) +
-                    " x i32], [" + to_string(currentRunningFunctionArgumentsNumber) + " x i32]* %args, i32 0, i32 " +
-                    to_string(currentRunningFunctionArgumentsNumber + offset));
+        buffer.emit("%" + regPtr + " = getelementptr [" + to_string(argumentsCurrentFunction) +
+                    " x i32], [" + to_string(argumentsCurrentFunction) + " x i32]* %args, i32 0, i32 " +
+                    to_string(argumentsCurrentFunction + offset));
     }
     buffer.emit("store i32 %" + destReg + ", i32* %" + regPtr);
     return destReg;
@@ -1018,7 +992,7 @@ Statement::Statement(Type *t, Variable *id, Exp *exp) {
         continue_list = vector<pair<int, BranchLabelIndex>>();
         dataTag = t->value;
         // Creating a new variable on the stack will cause the next one to have a higher offset
-        int offset = offsetStack.back()++;
+        int offset = offsetStack.top()++;
         vector<string> varType = {t->value};
         shared_ptr<SymbolTableRecord> nVar = std::make_shared<SymbolTableRecord>(id->value, varType, offset, false);
         symbolTablesStack.back()->records.push_back(nVar);
@@ -1060,7 +1034,7 @@ Statement::Statement(Type *t, Variable *id) {
     break_list = vector<pair<int, BranchLabelIndex>>();
     continue_list = vector<pair<int, BranchLabelIndex>>();
     // Creating a new variable on the stack will cause the next one to have a higher offset
-    int offset = offsetStack.back()++;
+    int offset = offsetStack.top()++;
     vector<string> varType = {t->value};
     shared_ptr<SymbolTableRecord> nVar = std::make_shared<SymbolTableRecord>(id->value, varType, offset, false);
     symbolTablesStack.back()->records.push_back(nVar);
