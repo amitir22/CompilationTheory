@@ -1,7 +1,7 @@
 %{
 /* Declarations section */
 #include <stdio.h>
-#include "Semantics.h"
+#include "Classes.h"
 #include "parser.tab.hpp"
 #include "hw3_output.hpp"
 %}
