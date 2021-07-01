@@ -1,5 +1,5 @@
 #include "Semantics.h"
-#include "Registers.h"
+#include "RegisterFactory.h"
 #include "iostream"
 #include <memory>
 #include <cstring>
@@ -8,7 +8,7 @@
 extern char *yytext;
 int switchId = 0;
 int maxSwitch = 0;
-Registers registerPool;
+RegisterFactory registerFactory;
 CodeBuffer &buffer = CodeBuffer::instance();
 vector<shared_ptr<SymbolTable>> symbolTablesStack;
 stack<int> offsetStack;
@@ -31,7 +31,7 @@ string GetLLVMType(string type) {
 }
 
 string zeroExtendType(string original_register, string llvmType) {
-    string dest_register = registerPool.GetNewRegister();
+    string dest_register = registerFactory.makeNewRegister();
 
     buffer.emit("%" + dest_register + " = zext " + llvmType + " %" + original_register + " to i32");
 
@@ -227,11 +227,9 @@ Program::Program() : Variable("Program") {
     buffer.emitGlobal("}");
 }
 
-
 Type::Type(Variable *type) : Variable(type->value) {
 
 }
-
 
 FormalsList::FormalsList(FormalDecl *formalDecl) {
     formals.insert(formals.begin(), formalDecl);
@@ -299,7 +297,7 @@ FuncDecl::FuncDecl(RetType *rType, Variable *id, Formals *funcParams) {
     buffer.emit("%args = alloca [" + to_string(funcParams->formals.size()) + " x i32]");
 
     for (int i = 0; i < funcParams->formals.size(); ++i) {
-        string ptrRegister = registerPool.GetNewRegister();
+        string ptrRegister = registerFactory.makeNewRegister();
 
         buffer.emit("%" + ptrRegister + " = getelementptr [" + to_string(funcParams->formals.size()) + " x i32], [" +
                     to_string(funcParams->formals.size()) + " x i32]* %args, i32 0, i32 " + to_string(argumentsCurrentFunction - i - 1));
@@ -308,7 +306,7 @@ FuncDecl::FuncDecl(RetType *rType, Variable *id, Formals *funcParams) {
         string funcArgumentType = GetLLVMType(funcParams->formals[i]->paramType);
 
         if (funcArgumentType != "i32") {
-            dataRegister = registerPool.GetNewRegister();
+            dataRegister = registerFactory.makeNewRegister();
             buffer.emit("%" + dataRegister + " = zext " + funcArgumentType + " %" + to_string(i) + " to i32");
         }
 
@@ -327,7 +325,7 @@ Call::Call(Variable *id) {
                     value = row->type.back();
                     string funcName = id->value;
                     string returnTypeFromFunc = GetLLVMType(value);
-                    register_name = registerPool.GetNewRegister();
+                    register_name = registerFactory.makeNewRegister();
                     if (returnTypeFromFunc == "void") {
                         buffer.emit("call " + returnTypeFromFunc + " @" + funcName + " ()");
                     } else {
@@ -362,7 +360,7 @@ Call::Call(Variable *id, ExpList *list) {
                             funcArgs += GetLLVMType(list->expressionsList[i].type) + " %" + list->expressionsList[i].register_name + ",";
                             continue;
                         } else if (list->expressionsList[i].type == "BYTE" && row->type[i] == "INT") {
-                            string dataRegister = registerPool.GetNewRegister();
+                            string dataRegister = registerFactory.makeNewRegister();
                             buffer.emit("%" + dataRegister + " = zext i8 %" + list->expressionsList[i].register_name + " to i32");
                             funcArgs += GetLLVMType("INT") + " %" + dataRegister + ",";
                             continue;
@@ -378,7 +376,7 @@ Call::Call(Variable *id, ExpList *list) {
 
                     string funcName = id->value;
                     string returnTypeFromFunc = GetLLVMType(value);
-                    register_name = registerPool.GetNewRegister();
+                    register_name = registerFactory.makeNewRegister();
 
                     if (returnTypeFromFunc == "void") {
                         buffer.emit("call " + returnTypeFromFunc + " @" + funcName + " " + funcArgs);
@@ -442,7 +440,7 @@ Exp::Exp(Variable *variable, Exp *exp) {
     }
 
     type = "BOOL";
-    register_name = registerPool.GetNewRegister();
+    register_name = registerFactory.makeNewRegister();
 
     buffer.emit("%" + register_name + " = add i1 1, %" + exp->register_name);
 
@@ -460,7 +458,7 @@ Exp::Exp(Variable *variable, string taggedType) : Variable(variable->value) {
     }
     if (taggedType == "NUM") {
         type = "INT";
-        register_name = registerPool.GetNewRegister();
+        register_name = registerFactory.makeNewRegister();
 
         buffer.emit("%" + register_name + " = add i32 0," + variable->value);
     }
@@ -470,12 +468,12 @@ Exp::Exp(Variable *variable, string taggedType) : Variable(variable->value) {
             exit(0);
         }
 
-        register_name = registerPool.GetNewRegister();
+        register_name = registerFactory.makeNewRegister();
 
         buffer.emit("%" + register_name + " = add i8 0," + variable->value);
     }
     if (type == "BOOL") {
-        register_name = registerPool.GetNewRegister();
+        register_name = registerFactory.makeNewRegister();
 
         if (variable->value == "true") {
             actualBoolean = true;
@@ -487,7 +485,7 @@ Exp::Exp(Variable *variable, string taggedType) : Variable(variable->value) {
     }
 
     if (type == "STRING") {
-        register_name = registerPool.GetNewRegister();
+        register_name = registerFactory.makeNewRegister();
 
         int size = variable->value.size();
         string sub = variable->value.substr(1, variable->value.length() - 2);
@@ -510,7 +508,7 @@ Exp::Exp(Exp *ex) {
 }
 
 Exp::Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedType, P *leftInstruction) {
-    register_name = registerPool.GetNewRegister();
+    register_name = registerFactory.makeNewRegister();
     true_list = vector<pair<int, BranchLabelIndex>>();
     false_list = vector<pair<int, BranchLabelIndex>>();
     string end = "";
@@ -561,11 +559,11 @@ Exp::Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedType, P *leftInstru
 
             if (llvmSize == "i32") {
                 if (e1->type == "BYTE") {
-                    leftRegister = registerPool.GetNewRegister();
+                    leftRegister = registerFactory.makeNewRegister();
                     buffer.emit("%" + leftRegister + " = zext i8 %" + e1->register_name + " to i32");
                 }
                 if (e2->type == "BYTE") {
-                    rightRegister = registerPool.GetNewRegister();
+                    rightRegister = registerFactory.makeNewRegister();
                     buffer.emit("%" + rightRegister + " = zext i8 %" + e2->register_name + " to i32");
                 }
             }
@@ -587,7 +585,7 @@ Exp::Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedType, P *leftInstru
             string leftRegister = e1->register_name;
             string rightRegister = e2->register_name;
             string llvmSize = "i8";
-            register_name = registerPool.GetNewRegister();
+            register_name = registerFactory.makeNewRegister();
             type = "BYTE";
 
             if (e1->type == "INT" || e2->type == "INT") {
@@ -596,11 +594,11 @@ Exp::Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedType, P *leftInstru
             }
             if (e1->type != e2->type) {
                 if (e1->type == "BYTE") {
-                    leftRegister = registerPool.GetNewRegister();
+                    leftRegister = registerFactory.makeNewRegister();
                     buffer.emit("%" + leftRegister + " = zext i8 %" + e1->register_name + " to i32");
                 }
                 if (e2->type == "BYTE") {
-                    rightRegister = registerPool.GetNewRegister();
+                    rightRegister = registerFactory.makeNewRegister();
                     buffer.emit("%" + rightRegister + " = zext i8 %" + e2->register_name + " to i32");
                 }
             }
@@ -611,12 +609,12 @@ Exp::Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedType, P *leftInstru
             } else if (op->value == "*") {
                 operation = "mul";
             } else if (op->value == "/") {
-                string condition = registerPool.GetNewRegister();
+                string condition = registerFactory.makeNewRegister();
 
                 if (bothByte) {
-                    leftRegister = registerPool.GetNewRegister();
+                    leftRegister = registerFactory.makeNewRegister();
                     buffer.emit("%" + leftRegister + " = zext i8 %" + e1->register_name + " to i32");
-                    rightRegister = registerPool.GetNewRegister();
+                    rightRegister = registerFactory.makeNewRegister();
                     buffer.emit("%" + rightRegister + " = zext i8 %" + e2->register_name + " to i32");
                 }
 
@@ -624,7 +622,7 @@ Exp::Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedType, P *leftInstru
 
                 int zeroDivisionBranchCheck = buffer.emit("br i1 %" + condition + ", label @, label @");
                 string zeroDivisionCaseLabel = buffer.genLabel();
-                string zeroDivisionExceptionReg = registerPool.GetNewRegister();
+                string zeroDivisionExceptionReg = registerFactory.makeNewRegister();
 
                 buffer.emit("%" + zeroDivisionExceptionReg + " = getelementptr [23 x i8], [23 x i8]* @ThrowZeroException, i32 0, i32 0");
                 buffer.emit("call void @print(i8* %" + zeroDivisionExceptionReg + ")");
@@ -645,7 +643,7 @@ Exp::Exp(Exp *e1, Variable *op, Exp *e2, const string &taggedType, P *leftInstru
             buffer.emit("%" + register_name + " = " + operation + " " + llvmSize + " %" + leftRegister + ", %" + rightRegister);
 
             if (operation == "sdiv" && bothByte) {
-                string tempReg = registerPool.GetNewRegister();
+                string tempReg = registerFactory.makeNewRegister();
                 buffer.emit("%" + tempReg + " = trunc i32 %" + register_name + " to i8");
                 register_name = tempReg;
             }
@@ -715,14 +713,16 @@ Exp::Exp(Exp *e1, string tag, N *label) {
     if (label) {
         buffer.bpatch(buffer.makelist(pair<int, BranchLabelIndex>(label->loc, FIRST)), label->instruction);
     }
-    //buffer.emit("I am using the special constructor");
+
     value = e1->value;
     type = e1->type;
     actualBoolean = e1->actualBoolean;
     register_name = e1->register_name;
     instruction = e1->instruction;
+
     if (tag != "switch") {
         int loc = buffer.emit("br i1 %" + register_name + ", label @, label @");
+
         true_list = buffer.makelist(pair<int, BranchLabelIndex>(loc, FIRST));
         false_list = buffer.makelist(pair<int, BranchLabelIndex>(loc, SECOND));
     } else {
@@ -731,32 +731,33 @@ Exp::Exp(Exp *e1, string tag, N *label) {
     }
     if (tag == "switch") {
         string switchCheckerLabelName = "label_switch_" + to_string(switchId);
+
         buffer.emit("br label %" + switchCheckerLabelName);
     }
 }
 
 string loadVariableFromSymTab(int offset, string type) {
-    string reg = registerPool.GetNewRegister();
-    string ptrRegister = registerPool.GetNewRegister();
-    if (offset >= 0) {
+    string reg = registerFactory.makeNewRegister();
+    string ptrRegister = registerFactory.makeNewRegister();
 
-        // this variable is declared inside the function, and not part of the function parameters
+    if (offset >= 0) {
         buffer.emit("%" + ptrRegister + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
     } else if (offset < 0 && argumentsCurrentFunction > 0) {
-        // this variable is one of the function parameters
         buffer.emit("%" + ptrRegister + " = getelementptr [" + to_string(argumentsCurrentFunction) + " x i32], [" +
                     to_string(argumentsCurrentFunction) + " x i32]* %args, i32 0, i32 " +
                     to_string(argumentsCurrentFunction + offset));
     }
-    // load the value pointed by the pointer, into the register
+
     buffer.emit("%" + reg + " = load i32, i32* %" + ptrRegister);
+
     string varType = GetLLVMType(type);
     string register_name = reg;
+
     if (varType != "i32") {
-        // Shortening the new register to it's correct width
-        register_name = registerPool.GetNewRegister();
+        register_name = registerFactory.makeNewRegister();
         buffer.emit("%" + register_name + " = trunc i32 %" + reg + " to " + varType);
     }
+
     return register_name;
 }
 
@@ -770,12 +771,10 @@ ExpList::ExpList(Exp *exp, ExpList *expList) {
 }
 
 Statement::Statement(Variable *type) {
-//    int l = loopCounter;
-//    int s = switchCounter;
     break_list = vector<pair<int, BranchLabelIndex>>();
     continue_list = vector<pair<int, BranchLabelIndex>>();
+
     if (loopCounter == 0 && switchCounter == 0) {
-        // We are not inside any loop, so a break or continue is illegal in this context
         if (type->value == "break") {
             output::errorUnexpectedBreak(yylineno);
             exit(0);
@@ -784,19 +783,16 @@ Statement::Statement(Variable *type) {
             exit(0);
         }
     } else if (loopCounter != 0) {
-        // We are inside a loop so break and continue are both legal
-        // Creating a list to patch later with the correct place to jump to, the patch would make the jump go back to the start of the loop
-        // or exit from it
         int loc = buffer.emit("br label @");
+
         if (type->value == "break") {
             break_list = buffer.makelist({loc, FIRST});
         } else {
             continue_list = buffer.makelist({loc, FIRST});
         }
     } else if (switchCounter != 0) {
-        // We are inside a switch, so a break and continue are both legal
-        // Creating a list to patch later with the correct place to jump to, the patch would make the jump go outside of the switch
         int loc = buffer.emit("br label @");
+
         if (type->value == "break") {
             break_list = buffer.makelist({loc, FIRST});
         } else {
@@ -807,6 +803,7 @@ Statement::Statement(Variable *type) {
         output::errorUnexpectedContinue(yylineno);
         exit(0);
     }
+
     dataTag = "break or continue";
 }
 
@@ -815,6 +812,7 @@ Statement::Statement(string type, Exp *exp, Statement *wrappedStatement) {
         output::errorMismatch(yylineno);
         exit(0);
     }
+
     if (wrappedStatement != nullptr) {
         break_list = wrappedStatement->break_list;
         continue_list = wrappedStatement->continue_list;
@@ -822,19 +820,17 @@ Statement::Statement(string type, Exp *exp, Statement *wrappedStatement) {
         break_list = vector<pair<int, BranchLabelIndex>>();
         continue_list = vector<pair<int, BranchLabelIndex>>();
     }
+
     dataTag = "if if else while";
 }
 
-// For Return SC -> this is for a function with a void return type
 Statement::Statement(const string &funcReturnType) {
     break_list = vector<pair<int, BranchLabelIndex>>();
     continue_list = vector<pair<int, BranchLabelIndex>>();
-    // Need to check if the current running function is of void type
+
     for (int i = symbolTablesStack.size() - 1; i >= 0; i--) {
-        // Need to search in the current symtab with no particular order for the current function
         for (auto &row : symbolTablesStack[i]->records) {
             if (row->isFunc && row->name == currentFunctionId) {
-                // We found the current running function
                 if (row->type.back() == funcReturnType) {
                     dataTag = "void return value";
                     buffer.emit("ret void");
@@ -848,26 +844,23 @@ Statement::Statement(const string &funcReturnType) {
 }
 
 Statement::Statement(Exp *exp) {
-    // Need to check if the current running function is of the specified type
     if (exp->type == "VOID") {
-        // Attempt to return a void expression from a value returning function
         output::errorMismatch(yylineno);
         exit(0);
     }
 
     for (int i = symbolTablesStack.size() - 1; i >= 0; i--) {
-        // Need to search in the current symtab with no particular order for the current function
         for (auto &row : symbolTablesStack[i]->records) {
             if (row->isFunc && row->name == currentFunctionId) {
-                // We found the current running function
                 if (row->type.back() == exp->type) {
                     dataTag = exp->value;
                     string realLLVMType = GetLLVMType(exp->type);
+
                     buffer.emit("ret " + realLLVMType + " %" + exp->register_name);
                 } else if (row->type.back() == "INT" && exp->type == "BYTE") {
                     dataTag = row->type.back();
-                    // Cast the Byte expression into an int for a proper return type
-                    string dataRegister = registerPool.GetNewRegister();
+                    string dataRegister = registerFactory.makeNewRegister();
+
                     buffer.emit("%" + dataRegister + " = zext i8 %" + exp->register_name + " to i32");
                     buffer.emit("ret i32 %" + dataRegister);
                 } else {
@@ -880,24 +873,28 @@ Statement::Statement(Exp *exp) {
 }
 
 string saveNewDataOnStackVariable(string sourceReg, string sourceType, int offset) {
-    string destReg = registerPool.GetNewRegister();
+    string destReg = registerFactory.makeNewRegister();
     string dataRegister = sourceReg;
     string regType = GetLLVMType(sourceType);
+
     if (regType != "i32") {
         dataRegister = zeroExtendType(sourceReg, regType);
     }
+
     buffer.emit("%" + destReg + " = add i32 0,%" + dataRegister);
-    string regPtr = registerPool.GetNewRegister();
+
+    string regPtr = registerFactory.makeNewRegister();
+
     if (offset >= 0) {
-        // This is a stack assigned variable
         buffer.emit("%" + regPtr + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
     } else if (offset < 0 && argumentsCurrentFunction > 0) {
-        // This is a function parameter
         buffer.emit("%" + regPtr + " = getelementptr [" + to_string(argumentsCurrentFunction) +
                     " x i32], [" + to_string(argumentsCurrentFunction) + " x i32]* %args, i32 0, i32 " +
                     to_string(argumentsCurrentFunction + offset));
     }
+
     buffer.emit("store i32 %" + destReg + ", i32* %" + regPtr);
+
     return destReg;
 }
 
@@ -915,12 +912,10 @@ Statement::Statement(Variable *id, Exp *exp) {
 
     break_list = vector<pair<int, BranchLabelIndex>>();
     continue_list = vector<pair<int, BranchLabelIndex>>();
-    // Searching for the variable in the symtab
+
     for (int i = symbolTablesStack.size() - 1; i >= 0; i--) {
-        // Need to search in the current symtab with no particular order for the current function
         for (auto &row : symbolTablesStack[i]->records) {
             if (!row->isFunc && row->name == id->value) {
-                // We found the desired variable
                 if ((row->type.back() == exp->type) || (row->type.back() == "INT" && exp->type == "BYTE")) {
                     dataTag = row->type.back();
                     instruction = exp->instruction;
@@ -933,7 +928,6 @@ Statement::Statement(Variable *id, Exp *exp) {
 
 Statement::Statement(Type *t, Variable *id, Exp *exp) {
     if (isDeclared(id->value)) {
-        // Trying to redeclare a name that is already used for a different variable/fucntion
         output::errorDef(yylineno, id->value);
         exit(0);
     }
@@ -941,33 +935,38 @@ Statement::Statement(Type *t, Variable *id, Exp *exp) {
         break_list = vector<pair<int, BranchLabelIndex>>();
         continue_list = vector<pair<int, BranchLabelIndex>>();
         dataTag = t->value;
-        // Creating a new variable on the stack will cause the next one to have a higher offset
+
         int offset = offsetStack.top()++;
+
         vector<string> varType = {t->value};
         shared_ptr<SymbolTableRecord> nVar = std::make_shared<SymbolTableRecord>(id->value, varType, offset, false);
+
         symbolTablesStack.back()->records.push_back(nVar);
 
-        register_name = registerPool.GetNewRegister();
+        register_name = registerFactory.makeNewRegister();
         string regType = GetLLVMType(t->value);
         string dataRegister = register_name;
+
         if (t->value == "INT" && exp->type == "BYTE") {
-            // Need to zero extend the value to the assigned type
-            dataRegister = registerPool.GetNewRegister();
+            dataRegister = registerFactory.makeNewRegister();
             buffer.emit("%" + dataRegister + " = zext i8 %" + exp->register_name + " to i32");
         } else {
             dataRegister = exp->register_name;
         }
+
         buffer.emit("%" + register_name + " = add " + regType + " 0,%" + dataRegister);
-        string regPtr = registerPool.GetNewRegister();
+
+        string regPtr = registerFactory.makeNewRegister();
+
         buffer.emit("%" + regPtr + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
+
         dataRegister = register_name;
+
         if (regType != "i32") {
-            // Need to extend the variable so it fits inside our stack
-            dataRegister = registerPool.GetNewRegister();
+            dataRegister = registerFactory.makeNewRegister();
             buffer.emit("%" + dataRegister + " = zext " + regType + " %" + register_name + " to i32");
         }
 
-        // Storing the new declared variable in the stack of the current scope
         buffer.emit("store i32 %" + dataRegister + ", i32* %" + regPtr);
     } else {
         output::errorMismatch(yylineno);
@@ -977,34 +976,38 @@ Statement::Statement(Type *t, Variable *id, Exp *exp) {
 
 Statement::Statement(Type *t, Variable *id) {
     if (isDeclared(id->value)) {
-        // Trying to redeclare a name that is already used for a different variable/fucntion
         output::errorDef(yylineno, id->value);
         exit(0);
     }
+
     break_list = vector<pair<int, BranchLabelIndex>>();
     continue_list = vector<pair<int, BranchLabelIndex>>();
-    // Creating a new variable on the stack will cause the next one to have a higher offset
+
     int offset = offsetStack.top()++;
     vector<string> varType = {t->value};
     shared_ptr<SymbolTableRecord> nVar = std::make_shared<SymbolTableRecord>(id->value, varType, offset, false);
+
     symbolTablesStack.back()->records.push_back(nVar);
     dataTag = t->value;
-    register_name = registerPool.GetNewRegister();
+    register_name = registerFactory.makeNewRegister();
+
     string regType = GetLLVMType(t->value);
-    // This is a declaration of a new variable with no value assignment, so we initialize it to a default value of 0
+
     buffer.emit("%" + register_name + " = add " + regType + " 0,0");
-    string regPtr = registerPool.GetNewRegister();
-    // Getting a new pointer to store the declared variable inside the current scope
+
+    string regPtr = registerFactory.makeNewRegister();
+
     buffer.emit("%" + regPtr + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
+
     string dataRegister = register_name;
+
     if (regType != "i32") {
-        // Need to extend the variable so it fits inside our stack
-        dataRegister = registerPool.GetNewRegister();
+        dataRegister = registerFactory.makeNewRegister();
+
         buffer.emit("%" + dataRegister + " = zext " + regType + " %" + register_name + " to i32");
     }
-    // Storing the new declared variable in the stack of the current scope
-    buffer.emit("store i32 %" + dataRegister + ", i32* %" + regPtr);
 
+    buffer.emit("store i32 %" + dataRegister + ", i32* %" + regPtr);
 }
 
 Statement::Statement(Statements *states) {
@@ -1014,7 +1017,6 @@ Statement::Statement(Statements *states) {
 }
 
 Statement::Statement(Exp *exp, CaseList *cList) {
-    // Need to check that exp is a number (int,byte) and that all case decl in caselist are int or byte
     if (exp->type != "INT" && exp->type != "BYTE") {
         output::errorMismatch(yylineno);
         exit(0);
@@ -1028,32 +1030,37 @@ Statement::Statement(Exp *exp, CaseList *cList) {
     }
 
     dataTag = "switch block";
-    // Print a jump to the checker of the first switch case
+
     buffer.emit("label_switch_" + to_string(switchId) + ":");
+
     int defaultIndex = 0;
     string endLabel = "label_switch_" + to_string(switchId) + "_end";
+
     for (int i = cList->cases.size() - 1; i >= 0; --i) {
         if (cList->cases[i]->register_name == "default") {
             defaultIndex = i;
             continue;
         }
-        string tempReg = registerPool.GetNewRegister();
-        string compReg = registerPool.GetNewRegister();
+
+        string tempReg = registerFactory.makeNewRegister();
+        string compReg = registerFactory.makeNewRegister();
+
         buffer.emit("%" + tempReg + " = add i32 0, " + to_string(cList->cases[i]->numToInt));
         buffer.emit("%" + compReg + " = icmp eq i32 %" + exp->register_name + ", %" + tempReg);
-        // true label is the first label
+
         string falseCaseLabel = "label_switch_" + to_string(switchId) + "_case_" + to_string(i);
+
         buffer.emit("br i1 %" + compReg + ", label %" + cList->cases[i]->instruction + ", label %" + falseCaseLabel);
         buffer.emit(falseCaseLabel + ":");
+
         if (!cList->cases[i]->break_list.empty()) {
             buffer.bpatch(cList->cases[i]->break_list, endLabel);
         }
         if (cList->cases.size() == 1) {
-            // There is only 1 case, so we need to patch the ending
             buffer.emit("br label %" + endLabel);
         }
     }
-    // Need to add a jump to the default case if none of the other cases was a hit
+
     buffer.emit("br label %" + cList->cases[defaultIndex]->instruction);
     buffer.bpatch(cList->break_list, endLabel);
     buffer.emit(endLabel + ":");
@@ -1062,6 +1069,7 @@ Statement::Statement(Exp *exp, CaseList *cList) {
     continue_list = vector<pair<int, BranchLabelIndex>>();
     continue_list.reserve(continue_list.size() + cList->continue_list.size());
     continue_list.insert(continue_list.end(), cList->continue_list.begin(), cList->continue_list.end());
+
     for (auto &i : cList->cases) {
         continue_list.reserve(continue_list.size() + i->continue_list.size());
         continue_list.insert(continue_list.end(), i->continue_list.begin(), i->continue_list.end());
@@ -1080,11 +1088,12 @@ Statements::Statements(Statements* statements, Statement* statement) {
 
 CaseDecl::CaseDecl(Exp *num, Statements *states, Variable *caseLabel) {
     instruction = caseLabel->instruction;
+
     if (num->type != "INT" && num->type != "BYTE") {
-        //if (num->value != "INT" && num->value != "BYTE") {
         output::errorMismatch(yylineno);
         exit(0);
     }
+
     register_name = num->register_name;
     value = num->type;
     numToInt = stoi(num->value);
@@ -1104,7 +1113,6 @@ CaseList::CaseList(CaseDecl* caseDecl, CaseList* caseList) {
     break_list.insert(break_list.end(), caseDecl->break_list.begin(), caseDecl->break_list.end());
     continue_list = caseList->continue_list;
     continue_list.insert(continue_list.end(), caseDecl->continue_list.begin(), caseDecl->continue_list.end());
-
     value = "case list";
 }
 
@@ -1116,15 +1124,18 @@ CaseList::CaseList(CaseDecl* caseDecl) {
 }
 
 CaseList::CaseList(Statements* statements, N* label) {
-    // This is the rule for default case
     CaseDecl *tempCase = new CaseDecl();
+
     tempCase->value = "INT";
     tempCase->register_name = "default";
     tempCase->instruction = label->instruction;
+
     buffer.bpatch(buffer.makelist({label->loc, FIRST}), label->instruction);
+
     this->cases.push_back(tempCase);
-    // Printing the exit outside of default
+
     int loc = buffer.emit("br label @");
+
     this->break_list = buffer.merge(statements->break_list, buffer.makelist({loc, FIRST}));
     this->continue_list = statements->continue_list;
 }
@@ -1151,9 +1162,8 @@ N::N() {
 void backpatchIf(M *label, Exp *exp) {
     int loc = buffer.emit("br label @");
     string end = buffer.genLabel();
-    // Patching the jump to the if instruction in case the IF condition is true
+
     buffer.bpatch(exp->true_list, label->instruction);
-    // Patching the jump outside of the if in case the IF condition is false
     buffer.bpatch(exp->false_list, end);
     buffer.bpatch(buffer.makelist({loc, FIRST}), end);
 }
@@ -1181,9 +1191,8 @@ void insertFunctionParametersToSymbolTable(Formals *formals) {
 void backpatchIfElse(M *label1, N *label2, Exp *exp) {
     int loc = buffer.emit("br label @");
     string end = buffer.genLabel();
-    // Patching the jump to the if instruction in case the IF condition is true
+
     buffer.bpatch(exp->true_list, label1->instruction);
-    // Patching the jump to the else instruction in case the IF condition is false
     buffer.bpatch(exp->false_list, label2->instruction);
     buffer.bpatch(buffer.makelist({label2->loc, FIRST}), end);
     buffer.bpatch(buffer.makelist({loc, FIRST}), end);
@@ -1199,13 +1208,17 @@ Funcs::Funcs() {
 Statement *mergeIfElseLists(Statement *ifStatement, Statement *elseStatement) {
     ifStatement->break_list = buffer.merge(ifStatement->break_list, elseStatement->break_list);
     ifStatement->continue_list = buffer.merge(ifStatement->continue_list, elseStatement->continue_list);
+
     return ifStatement;
 }
 
 string DeclareCaseLabel() {
     buffer.emit("; generating new label");
+
     int loc = buffer.emit("br label @");
     string label = buffer.genLabel();
+
     buffer.bpatch(buffer.makelist({loc, FIRST}), label);
+
     return label;
 }

@@ -3,11 +3,13 @@
 
 #include <string>
 
-using std::to_string;
+using std::string;
 
 class RegisterFactory {
+private:
     unsigned int counter;
 
+public:
     RegisterFactory() : counter(0) { }
 
     string makeNewRegister();
