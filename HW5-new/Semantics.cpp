@@ -1,4 +1,4 @@
-#include "Semantics.h"
+#include "Classes.h"
 #include "RegisterFactory.h"
 #include "iostream"
 #include <memory>
@@ -17,6 +17,11 @@ string currentFunctionId;
 int argumentsCurrentFunction = 0;
 int loopCounter = 0;
 int switchCounter = 0;
+
+SymbolTableRecord::SymbolTableRecord(string name, vector<string> type, int offset, bool isFunc) : name(std::move(name)), type(std::move(type)),
+                                                                                                  offset(offset), isFunc(isFunc) {
+
+}
 
 string GetLLVMType(string type) {
     if (type == "VOID") {
@@ -155,9 +160,124 @@ bool isDeclaredVariable(const string &name) {
     return false;
 }
 
-SymbolTableRecord::SymbolTableRecord(string name, vector<string> type, int offset, bool isFunc) : name(std::move(name)), type(std::move(type)),
-                                                                                            offset(offset), isFunc(isFunc) {
+Statement *mergeIfElseLists(Statement *ifStatement, Statement *elseStatement) {
+    ifStatement->break_list = buffer.merge(ifStatement->break_list, elseStatement->break_list);
+    ifStatement->continue_list = buffer.merge(ifStatement->continue_list, elseStatement->continue_list);
 
+    return ifStatement;
+}
+
+string DeclareCaseLabel() {
+    buffer.emit("; generating new label");
+
+    int loc = buffer.emit("br label @");
+    string label = buffer.genLabel();
+
+    buffer.bpatch(buffer.makelist({loc, FIRST}), label);
+
+    return label;
+}
+
+string loadVariableFromSymTab(int offset, string type) {
+    string reg = registerFactory.makeNewRegister();
+    string ptrRegister = registerFactory.makeNewRegister();
+
+    if (offset >= 0) {
+        buffer.emit("%" + ptrRegister + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
+    } else if (offset < 0 && argumentsCurrentFunction > 0) {
+        buffer.emit("%" + ptrRegister + " = getelementptr [" + to_string(argumentsCurrentFunction) + " x i32], [" +
+                    to_string(argumentsCurrentFunction) + " x i32]* %args, i32 0, i32 " +
+                    to_string(argumentsCurrentFunction + offset));
+    }
+
+    buffer.emit("%" + reg + " = load i32, i32* %" + ptrRegister);
+
+    string varType = GetLLVMType(type);
+    string register_name = reg;
+
+    if (varType != "i32") {
+        register_name = registerFactory.makeNewRegister();
+        buffer.emit("%" + register_name + " = trunc i32 %" + reg + " to " + varType);
+    }
+
+    return register_name;
+}
+
+string saveNewDataOnStackVariable(string sourceReg, string sourceType, int offset) {
+    string destReg = registerFactory.makeNewRegister();
+    string dataRegister = sourceReg;
+    string regType = GetLLVMType(sourceType);
+
+    if (regType != "i32") {
+        dataRegister = zeroExtendType(sourceReg, regType);
+    }
+
+    buffer.emit("%" + destReg + " = add i32 0,%" + dataRegister);
+
+    string regPtr = registerFactory.makeNewRegister();
+
+    if (offset >= 0) {
+        buffer.emit("%" + regPtr + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
+    } else if (offset < 0 && argumentsCurrentFunction > 0) {
+        buffer.emit("%" + regPtr + " = getelementptr [" + to_string(argumentsCurrentFunction) +
+                    " x i32], [" + to_string(argumentsCurrentFunction) + " x i32]* %args, i32 0, i32 " +
+                    to_string(argumentsCurrentFunction + offset));
+    }
+
+    buffer.emit("store i32 %" + destReg + ", i32* %" + regPtr);
+
+    return destReg;
+}
+
+Variable *parseBooleanCondition(Exp *leftInstruction) {
+    Variable *node = new P(leftInstruction);
+    return node;
+}
+
+void backpatchIf(M *label, Exp *exp) {
+    int loc = buffer.emit("br label @");
+    string end = buffer.genLabel();
+
+    buffer.bpatch(exp->true_list, label->instruction);
+    buffer.bpatch(exp->false_list, end);
+    buffer.bpatch(buffer.makelist({loc, FIRST}), end);
+}
+
+shared_ptr<SymbolTableRecord> makeParamSymbolRecord(string value, vector<string> currentParamType, int currentOffset) {
+    return make_shared<SymbolTableRecord>(value, currentParamType, currentOffset, false);
+}
+
+void insertFunctionParametersToSymbolTable(Formals *formals) {
+    int currentOffset;
+    vector<string> currentParamType;
+    shared_ptr<SymbolTableRecord> currentParamRecord;
+
+    // iterating over all the function parameters and adding each one as a record in the symbol table
+    for (unsigned int i = 0; i < formals->formals.size(); ++i) {
+        currentOffset =  -i - 1;
+        currentParamType = {formals->formals[i]->paramType};
+
+        currentParamRecord = makeParamSymbolRecord(formals->formals[i]->value, currentParamType, currentOffset);
+
+        symbolTablesStack.back()->records.push_back(currentParamRecord);
+    }
+}
+
+void backpatchIfElse(M *label1, N *label2, Exp *exp) {
+    int loc = buffer.emit("br label @");
+    string end = buffer.genLabel();
+
+    buffer.bpatch(exp->true_list, label1->instruction);
+    buffer.bpatch(exp->false_list, label2->instruction);
+    buffer.bpatch(buffer.makelist({label2->loc, FIRST}), end);
+    buffer.bpatch(buffer.makelist({loc, FIRST}), end);
+}
+
+Funcs::Funcs() {
+    if (strcmp(yytext, "") != 0) {
+        output::errorSyn(yylineno);
+        exit(0);
+    }
 }
 
 Variable::Variable(string str) : register_name(""), value(), instruction("") {
@@ -736,31 +856,6 @@ Exp::Exp(Exp *e1, string tag, N *label) {
     }
 }
 
-string loadVariableFromSymTab(int offset, string type) {
-    string reg = registerFactory.makeNewRegister();
-    string ptrRegister = registerFactory.makeNewRegister();
-
-    if (offset >= 0) {
-        buffer.emit("%" + ptrRegister + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
-    } else if (offset < 0 && argumentsCurrentFunction > 0) {
-        buffer.emit("%" + ptrRegister + " = getelementptr [" + to_string(argumentsCurrentFunction) + " x i32], [" +
-                    to_string(argumentsCurrentFunction) + " x i32]* %args, i32 0, i32 " +
-                    to_string(argumentsCurrentFunction + offset));
-    }
-
-    buffer.emit("%" + reg + " = load i32, i32* %" + ptrRegister);
-
-    string varType = GetLLVMType(type);
-    string register_name = reg;
-
-    if (varType != "i32") {
-        register_name = registerFactory.makeNewRegister();
-        buffer.emit("%" + register_name + " = trunc i32 %" + reg + " to " + varType);
-    }
-
-    return register_name;
-}
-
 ExpList::ExpList(Exp *exp) {
     expressionsList.insert(expressionsList.begin(), exp);
 }
@@ -870,32 +965,6 @@ Statement::Statement(Exp *exp) {
             }
         }
     }
-}
-
-string saveNewDataOnStackVariable(string sourceReg, string sourceType, int offset) {
-    string destReg = registerFactory.makeNewRegister();
-    string dataRegister = sourceReg;
-    string regType = GetLLVMType(sourceType);
-
-    if (regType != "i32") {
-        dataRegister = zeroExtendType(sourceReg, regType);
-    }
-
-    buffer.emit("%" + destReg + " = add i32 0,%" + dataRegister);
-
-    string regPtr = registerFactory.makeNewRegister();
-
-    if (offset >= 0) {
-        buffer.emit("%" + regPtr + " = getelementptr [50 x i32], [50 x i32]* %stack, i32 0, i32 " + to_string(offset));
-    } else if (offset < 0 && argumentsCurrentFunction > 0) {
-        buffer.emit("%" + regPtr + " = getelementptr [" + to_string(argumentsCurrentFunction) +
-                    " x i32], [" + to_string(argumentsCurrentFunction) + " x i32]* %args, i32 0, i32 " +
-                    to_string(argumentsCurrentFunction + offset));
-    }
-
-    buffer.emit("store i32 %" + destReg + ", i32* %" + regPtr);
-
-    return destReg;
 }
 
 Statement::Statement(Call *call) {
@@ -1140,11 +1209,6 @@ CaseList::CaseList(Statements* statements, N* label) {
     this->continue_list = statements->continue_list;
 }
 
-Variable *parseBooleanCondition(Exp *leftInstruction) {
-    Variable *node = new P(leftInstruction);
-    return node;
-}
-
 P::P(Exp *leftInstruction) {
     loc = buffer.emit("br i1 %" + leftInstruction->register_name + ", label @, label @");
     instruction = buffer.genLabel();
@@ -1157,68 +1221,4 @@ M::M() {
 N::N() {
     loc = buffer.emit("br label @");
     instruction = buffer.genLabel();
-}
-
-void backpatchIf(M *label, Exp *exp) {
-    int loc = buffer.emit("br label @");
-    string end = buffer.genLabel();
-
-    buffer.bpatch(exp->true_list, label->instruction);
-    buffer.bpatch(exp->false_list, end);
-    buffer.bpatch(buffer.makelist({loc, FIRST}), end);
-}
-
-shared_ptr<SymbolTableRecord> makeParamSymbolRecord(string value, vector<string> currentParamType, int currentOffset) {
-    return make_shared<SymbolTableRecord>(value, currentParamType, currentOffset, false);
-}
-
-void insertFunctionParametersToSymbolTable(Formals *formals) {
-    int currentOffset;
-    vector<string> currentParamType;
-    shared_ptr<SymbolTableRecord> currentParamRecord;
-
-    // iterating over all the function parameters and adding each one as a record in the symbol table
-    for (unsigned int i = 0; i < formals->formals.size(); ++i) {
-        currentOffset =  -i - 1;
-        currentParamType = {formals->formals[i]->paramType};
-
-        currentParamRecord = makeParamSymbolRecord(formals->formals[i]->value, currentParamType, currentOffset);
-
-        symbolTablesStack.back()->records.push_back(currentParamRecord);
-    }
-}
-
-void backpatchIfElse(M *label1, N *label2, Exp *exp) {
-    int loc = buffer.emit("br label @");
-    string end = buffer.genLabel();
-
-    buffer.bpatch(exp->true_list, label1->instruction);
-    buffer.bpatch(exp->false_list, label2->instruction);
-    buffer.bpatch(buffer.makelist({label2->loc, FIRST}), end);
-    buffer.bpatch(buffer.makelist({loc, FIRST}), end);
-}
-
-Funcs::Funcs() {
-    if (strcmp(yytext, "") != 0) {
-        output::errorSyn(yylineno);
-        exit(0);
-    }
-}
-
-Statement *mergeIfElseLists(Statement *ifStatement, Statement *elseStatement) {
-    ifStatement->break_list = buffer.merge(ifStatement->break_list, elseStatement->break_list);
-    ifStatement->continue_list = buffer.merge(ifStatement->continue_list, elseStatement->continue_list);
-
-    return ifStatement;
-}
-
-string DeclareCaseLabel() {
-    buffer.emit("; generating new label");
-
-    int loc = buffer.emit("br label @");
-    string label = buffer.genLabel();
-
-    buffer.bpatch(buffer.makelist({loc, FIRST}), label);
-
-    return label;
 }

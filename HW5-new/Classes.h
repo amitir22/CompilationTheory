@@ -285,44 +285,48 @@ public:
     CaseDecl();
 };
 
+string GetLLVMType(string type);
+
+string zeroExtendType(string original_register, string llvmType);
+
+void openScope();
+
+void closeScope();
+
 void enterSwitchState();
 
 void exitSwitchState();
 
 void enterLoop();
 
+void exitLoop(N *first, P *second, Statement *statement);
+
+void exitProgramFuncs(RetType *ret);
+
 void exitProgramRuntimeState();
-
-void openScope();
-
-void closeScope();
-
-string loadVariableFromSymTab(int offset, string type);
-
-void printMessage(string message);
 
 bool isDeclared(const string &name);
 
 bool isDeclaredVariable(const string &name);
 
-string GetLLVMType(string type);
-
-Variable *parseBooleanCondition(Exp *leftInstruction);
-
-void exitProgramFuncs(RetType *ret);
-
-Statement *addElseStatementToBlock(Statement *ifStatement, Statement *elseStatment);
-
-void exitLoop(N *first, P *second, Statement *statement);
-
-void insertFunctionParametersToSymbolTable(Formals *formals);
-
-void backpatchIf(M *label, Exp *exp);
-
-void backpatchIfElse(M *firstLabel, N *secondlabel, Exp *exp);
-
 Statement *mergeIfElseLists(Statement *ifStatement, Statement *elseStatement);
 
 string DeclareCaseLabel();
+
+string loadVariableFromSymTab(int offset, string type);
+
+string saveNewDataOnStackVariable(string sourceReg, string sourceType, int offset);
+
+Variable *parseBooleanCondition(Exp *leftInstruction);
+
+void backpatchIf(M *label, Exp *exp);
+
+shared_ptr<SymbolTableRecord> makeParamSymbolRecord(string value, vector<string> currentParamType, int currentOffset);
+
+Statement *addElseStatementToBlock(Statement *ifStatement, Statement *elseStatment);
+
+void insertFunctionParametersToSymbolTable(Formals *formals);
+
+void backpatchIfElse(M *firstLabel, N *secondlabel, Exp *exp);
 
 #endif //COMPILATIONTHEORY_CLASSES_H
