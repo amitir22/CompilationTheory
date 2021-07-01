@@ -436,7 +436,7 @@ Exp::Exp(Call *call) {
 }
 
 Exp::Exp(Variable *id) {
-    // Need to make sure that the variable/func we want to use is declared
+    // making sure the variable is declared
     if (!isDeclaredVariable(id->value)) {
         output::errorUndef(yylineno, id->value);
         exit(0);
@@ -444,15 +444,14 @@ Exp::Exp(Variable *id) {
     true_list = vector<pair<int, BranchLabelIndex>>();
     false_list = vector<pair<int, BranchLabelIndex>>();
 
-    // Need to save the type of the variable function as the type of the expression
-    for (int i = symbolTablesStack.size() - 1; i >= 0; --i) {
-        for (auto &row : symbolTablesStack[i]->records) {
-            if (row->name == id->value) {
-                // We found the variable/func we wanted to use in the expression
+    for (auto symbolTableIter = symbolTablesStack.rbegin();
+         symbolTableIter != symbolTablesStack.rend();
+         ++symbolTableIter) {
+        for (auto &record : (*symbolTableIter)->records) {
+            if (record->name == id->value) {
                 value = id->value;
-                // Getting the type of the variable, or the return type of the function
-                type = row->type.back();
-                register_name = loadVariableFromSymTab(row->offset, type);
+                type = record->type.back();
+                register_name = loadVariableFromSymTab(record->offset, type);
                 return;
             }
         }
