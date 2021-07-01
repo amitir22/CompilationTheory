@@ -54,7 +54,7 @@
 Program : {$$ = new Program();} Funcs {exitProgramRuntimeState();};
 Funcs : %prec SECOND_PRIOR{$$ = new Funcs();} |
         FuncDecl Funcs %prec FIRST_PRIOR{$$ = new Funcs();};
-FuncDecl: RetType ID LPAREN Formals RPAREN {$$ = new FuncDecl(dynamic_cast<RetType*>($1),$2,dynamic_cast<Formals*>($4));} LBRACE OpenScope {insertFunctionParameters(dynamic_cast<Formals*>($4));} Statements CloseScope {exitProgramFuncs(dynamic_cast<RetType*>($1));} RBRACE {$$ = $6;};
+FuncDecl: RetType ID LPAREN Formals RPAREN {$$ = new FuncDecl(dynamic_cast<RetType*>($1),$2,dynamic_cast<Formals*>($4));} LBRACE OpenScope {insertFunctionParametersToSymbolTable(dynamic_cast<Formals*>($4));} Statements CloseScope {exitProgramFuncs(dynamic_cast<RetType*>($1));} RBRACE {$$ = $6;};
 RetType: Type{$$ = new RetType(dynamic_cast<Type*>($1));} | VOID{$$ = new RetType($1);};
 Formals : {$$ = new Formals();} | FormalsList{$$ = new Formals(dynamic_cast<FormalsList*>($1));};
 FormalsList : FormalDecl{$$ = new FormalsList(dynamic_cast<FormalDecl*>($1));} |

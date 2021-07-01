@@ -315,7 +315,7 @@ Statement *addElseStatementToBlock(Statement *ifStatement, Statement *elseStatme
 
 void exitLoop(N *first, P *second, Statement *statement);
 
-void insertFunctionParameters(Formals *formals);
+void insertFunctionParametersToSymbolTable(Formals *formals);
 
 void backpatchIf(M *label, Exp *exp);
 
