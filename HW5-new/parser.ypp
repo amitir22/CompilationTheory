@@ -4,9 +4,12 @@
     #include <stdlib.h>
     #include "Semantics.h"
     #include "hw3_output.hpp"
+
     using namespace std;
+
     extern int yylex();
     extern int yylineno;
+
     int yyerror(const char * message);
 %}
 
@@ -51,29 +54,156 @@
 %nonassoc FIRST_PRIOR;
 %%
 
-Program : {$$ = new Program();} Funcs {exitProgramRuntimeState();};
-Funcs : %prec SECOND_PRIOR{$$ = new Funcs();} |
-        FuncDecl Funcs %prec FIRST_PRIOR{$$ = new Funcs();};
-FuncDecl: RetType ID LPAREN Formals RPAREN {$$ = new FuncDecl(dynamic_cast<RetType*>($1),$2,dynamic_cast<Formals*>($4));} LBRACE OpenScope {insertFunctionParametersToSymbolTable(dynamic_cast<Formals*>($4));} Statements CloseScope {exitProgramFuncs(dynamic_cast<RetType*>($1));} RBRACE {$$ = $6;};
-RetType: Type{$$ = new RetType(dynamic_cast<Type*>($1));} | VOID{$$ = new RetType($1);};
-Formals : {$$ = new Formals();} | FormalsList{$$ = new Formals(dynamic_cast<FormalsList*>($1));};
-FormalsList : FormalDecl{$$ = new FormalsList(dynamic_cast<FormalDecl*>($1));} |
-              FormalDecl COMMA FormalsList{$$ = new FormalsList(dynamic_cast<FormalDecl*>($1), dynamic_cast<FormalsList*>($3));};
-FormalDecl : Type ID{$$ = new FormalDecl(dynamic_cast<Type*>($1), $2);};
-Statements : Statement{$$ = new Statements(dynamic_cast<Statement*>($1));};
-Statements : Statements Statement{$$ = new Statements(dynamic_cast<Statements*>($1), dynamic_cast<Statement*>($2));};
-Statement : LBRACE OpenScope Statements CloseScope RBRACE {$$ = new Statement(dynamic_cast<Statements*>($3));};
-Statement : Type ID SC{$$ = new Statement(dynamic_cast<Type*>($1),$2);};
-Statement : Type ID ASSIGN Exp SC{$$ = new Statement(dynamic_cast<Type*>($1),$2, dynamic_cast<Exp*>($4));};
-Statement : ID ASSIGN Exp SC{$$ = new Statement($1, dynamic_cast<Exp*>($3));};
-Statement : Call SC{$$ = new Statement(dynamic_cast<Call*>($1));};
-Statement : RETURN SC{$$ = new Statement("VOID");};
-Statement : RETURN Exp SC{$$ = new Statement(dynamic_cast<Exp*>($2));};
-Statement : IF LPAREN SPECIAL_EXP_PARSE RPAREN OpenScope M Statement %prec IF {$$ = new Statement("if", dynamic_cast<Exp*>($3), dynamic_cast<Statement*>($7));closeScope();backpatchIf(dynamic_cast<M*>($6), dynamic_cast<Exp*>($3));};
-Statement : IF LPAREN SPECIAL_EXP_PARSE RPAREN OpenScope M Statement ELSE {$$ = new Statement("if else", dynamic_cast<Exp*>($3), dynamic_cast<Statement*>($7));closeScope();} OpenScope N Statement CloseScope {backpatchIfElse(dynamic_cast<M*>($6),dynamic_cast<N*>($11), dynamic_cast<Exp*>($3));$$ = mergeIfElseLists(dynamic_cast<Statement*>($9),dynamic_cast<Statement*>($12));};
-Statement : WHILE LPAREN N Exp RPAREN {$$ = parseBooleanCondition(dynamic_cast<Exp*>($4));} {$$ = new Statement("while", dynamic_cast<Exp*>($4));enterLoop();} OpenScope Statement CloseScope{exitLoop(dynamic_cast<N*>($3),dynamic_cast<P*>($6),dynamic_cast<Statement*>($9)), $$ = $7;};
-Statement : BREAK SC{$$ = new Statement($1);};
-Statement : CONTINUE SC{$$ = new Statement($1);};
+Program:        {
+                    $$ = new Program();
+                } Funcs
+                {
+                    exitProgramRuntimeState();
+                }
+
+Funcs:          %prec SECOND_PRIOR
+                {
+                    $$ = new Funcs();
+                }
+
+Funcs:          FuncDecl Funcs %prec FIRST_PRIOR
+                {
+                    $$ = new Funcs();
+                }
+
+FuncDecl:       RetType ID LPAREN Formals RPAREN
+                {
+                    $$ = new FuncDecl(dynamic_cast<RetType*>($1), $2, dynamic_cast<Formals*>($4));
+                } LBRACE OpenScope
+                {
+                    insertFunctionParametersToSymbolTable(dynamic_cast<Formals*>($4));
+                } Statements CloseScope
+                {
+                    exitProgramFuncs(dynamic_cast<RetType*>($1));
+                } RBRACE
+                {
+                    $$ = $6;
+                }
+
+RetType:        Type
+                {
+                    $$ = new RetType(dynamic_cast<Type*>($1));
+                }
+
+RetType:        VOID
+                {
+                    $$ = new RetType($1);
+                }
+
+Formals:        {
+                    $$ = new Formals();
+                }
+
+Formals:        FormalsList
+                {
+                    $$ = new Formals(dynamic_cast<FormalsList*>($1));
+                }
+
+FormalsList:    FormalDecl
+                {
+                    $$ = new FormalsList(dynamic_cast<FormalDecl*>($1));
+                }
+
+FormalsList:    FormalDecl COMMA FormalsList
+                {
+                    $$ = new FormalsList(dynamic_cast<FormalDecl*>($1), dynamic_cast<FormalsList*>($3));
+                }
+
+FormalDecl:     Type ID
+                {
+                    $$ = new FormalDecl(dynamic_cast<Type*>($1), $2);
+                }
+
+Statements:     Statement
+                {
+                    $$ = new Statements(dynamic_cast<Statement*>($1));
+                }
+
+Statements:     Statements Statement
+                {
+                    $$ = new Statements(dynamic_cast<Statements*>($1), dynamic_cast<Statement*>($2));
+                }
+
+Statement:      LBRACE OpenScope Statements CloseScope RBRACE
+                {
+                    $$ = new Statement(dynamic_cast<Statements*>($3));
+                }
+
+Statement:      Type ID SC
+                {
+                    $$ = new Statement(dynamic_cast<Type*>($1),$2);
+                }
+
+Statement:      Type ID ASSIGN Exp SC
+                {
+                    $$ = new Statement(dynamic_cast<Type*>($1),$2, dynamic_cast<Exp*>($4));
+                }
+
+Statement:      ID ASSIGN Exp SC
+                {
+                    $$ = new Statement($1, dynamic_cast<Exp*>($3));
+                }
+
+Statement:      Call SC
+                {
+                    $$ = new Statement(dynamic_cast<Call*>($1));
+                }
+
+Statement:      RETURN SC
+                {
+                    $$ = new Statement("VOID");
+                }
+
+Statement:      RETURN Exp SC
+                {
+                    $$ = new Statement(dynamic_cast<Exp*>($2));
+                }
+
+Statement:      IF LPAREN SPECIAL_EXP_PARSE RPAREN OpenScope M Statement %prec IF
+                {
+                    $$ = new Statement("if", dynamic_cast<Exp*>($3), dynamic_cast<Statement*>($7));
+                    closeScope();
+                    backpatchIf(dynamic_cast<M*>($6), dynamic_cast<Exp*>($3));
+                }
+
+Statement:      IF LPAREN SPECIAL_EXP_PARSE RPAREN OpenScope M Statement ELSE
+                {
+                    $$ = new Statement("if else", dynamic_cast<Exp*>($3), dynamic_cast<Statement*>($7));
+                    closeScope();
+                } OpenScope N Statement CloseScope
+                {
+                    backpatchIfElse(dynamic_cast<M*>($6),dynamic_cast<N*>($11), dynamic_cast<Exp*>($3));
+                    $$ = mergeIfElseLists(dynamic_cast<Statement*>($9),dynamic_cast<Statement*>($12));
+                }
+
+Statement:      WHILE LPAREN N Exp RPAREN
+                {
+                    $$ = parseBooleanCondition(dynamic_cast<Exp*>($4));
+                }
+                {
+                    $$ = new Statement("while", dynamic_cast<Exp*>($4));
+                    enterLoop();
+                } OpenScope Statement CloseScope
+                {
+                    exitLoop(dynamic_cast<N*>($3),dynamic_cast<P*>($6),dynamic_cast<Statement*>($9));
+                    $$ = $7;
+                }
+
+Statement:      BREAK SC
+                {
+                    $$ = new Statement($1);
+                }
+
+Statement:      CONTINUE SC
+                {
+                    $$ = new Statement($1);
+                }
+
 Statement : SWITCH {enterSwitchState();} LPAREN Exp {new Exp(dynamic_cast<Exp*>($4), "switch");} RPAREN LBRACE OpenScope CaseList {$$ = new Statement(dynamic_cast<Exp*>($4),dynamic_cast<CaseList*>($9));} CloseScope {exitSwitchState();} RBRACE {$$ = $10;};
 Call : ID LPAREN ExpList RPAREN{$$ = new Call($1, dynamic_cast<ExpList*>($3));};
 Call : ID LPAREN RPAREN{$$ = new Call($1);};
@@ -100,13 +230,39 @@ Exp : Exp REL Exp{$$ = new Exp(dynamic_cast<Exp*>($1),$2,dynamic_cast<Exp*>($3),
 CaseList : CaseDecl CaseList{$$ = new CaseList(dynamic_cast<CaseDecl*>($1),dynamic_cast<CaseList*>($2));};
 CaseList : CaseDecl{$$ = new CaseList(dynamic_cast<CaseDecl*>($1));};
 CaseList : DEFAULT COLON N Statements{$$ = new CaseList(dynamic_cast<Statements*>($4), dynamic_cast<N*>($3));};
-CaseDecl : CASE CaseOpener NUM COLON Statements{$$ = new CaseDecl(new Exp($3, "CASE_NUM"), dynamic_cast<Statements*>($5), dynamic_cast<Variable*>($2));};
-OpenScope : {openScope();};
-CloseScope : {closeScope();};
-SPECIAL_EXP_PARSE : Exp {$$ = new Exp(dynamic_cast<Exp*>($1), "STRING");};
-M : {$$ = new M();};
-N : {$$ = new N();};
-CaseOpener : {$$ = new Variable("OpenCase");}
+
+CaseDecl:           CASE CaseOpener NUM COLON Statements
+                    {
+                        $$ = new CaseDecl(new Exp($3, "CASE_NUM"), dynamic_cast<Statements*>($5), dynamic_cast<Variable*>($2));
+                    }
+
+OpenScope:          {
+                        openScope();
+                    }
+
+/* CloseScope is basically CS */
+CloseScope:         {
+                        closeScope();
+                    }
+
+// todo: rename
+SPECIAL_EXP_PARSE:  Exp
+                    {
+                        $$ = new Exp(dynamic_cast<Exp*>($1), "STRING");
+                    }
+
+M:                  {
+                        $$ = new M();
+                    }
+
+N:                  {
+                        $$ = new N();
+                    }
+
+/* todo: rename declaration + usage */
+CaseOpener:         {
+                        $$ = new Variable("OpenCase");
+                    }
 
 %%
 
